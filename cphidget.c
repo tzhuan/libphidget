@@ -6,7 +6,11 @@
 #include "cphidgetlist.h"
 #include "utils.h"
 
+static int CPhidgetGPP_dataInput(CPhidgetHandle phid, unsigned char *buffer, int length);
+
 int print_debug_messages = FALSE;
+
+void(CCONV *fptrJavaDetachCurrentThread)(void) = NULL;
 
 CPhidgetListHandle ActiveDevices = 0;
 CPhidgetListHandle AttachedDevices = 0;
@@ -120,8 +124,8 @@ int CCONV CPhidget_areEqual(void *arg1, void *arg2)
 	if(phid1->specificDevice && phid2->specificDevice)
 	{
 		// If one is open serial and the other is open label
-		if(phid1->specificDevice == PHIDGETOPEN_SERIAL && phid2->specificDevice == PHIDGETOPEN_LABEL ||
-			phid1->specificDevice == PHIDGETOPEN_LABEL && phid2->specificDevice == PHIDGETOPEN_SERIAL)
+		if((phid1->specificDevice == PHIDGETOPEN_SERIAL && phid2->specificDevice == PHIDGETOPEN_LABEL) ||
+			(phid1->specificDevice == PHIDGETOPEN_LABEL && phid2->specificDevice == PHIDGETOPEN_SERIAL))
 			return PFALSE;
 
 		// If one is open serial but they have different serials
@@ -279,14 +283,14 @@ int CPhidget_read(CPhidgetHandle phid)
 
 	TESTPTR(phid)
 
-	if (CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHED_FLAG)
-		|| CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHING_FLAG)) {
-		result = CUSBReadPacket((CPhidgetHandle)phid,
-		    phid->lastReadPacket);
-		if (result) return result;
-		if (phid->fptrData)
-			result= phid->fptrData((CPhidgetHandle)phid,
-			    phid->lastReadPacket, phid->inputReportByteLength);
+	if (CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHED_FLAG) || CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHING_FLAG))
+	{
+		if((result = CUSBReadPacket((CPhidgetHandle)phid, phid->lastReadPacket)) != EPHIDGET_OK)
+			return result;
+		if((phid->lastReadPacket[0] & PHID_USB_GENERAL_PACKET_FLAG) && deviceSupportsGeneralUSBProtocol(phid))
+			result = CPhidgetGPP_dataInput(phid, phid->lastReadPacket, phid->inputReportByteLength);
+		else if (phid->fptrData)
+			result= phid->fptrData(phid, phid->lastReadPacket, phid->inputReportByteLength);
 		return result;
 	}
 	return EPHIDGET_NOTATTACHED;
@@ -503,6 +507,10 @@ netdone:
 		if(!ActiveDevices && !ActivePhidgetManagers)
 		{
 			JoinCentralThread();
+			//Shut down USB
+#if defined(_LINUX) && !defined(_ANDROID)
+			CUSBUninit();
+#endif
 		}
 	}
 	CPhidget_clearStatusFlag(&phid->status, PHIDGET_OPENED_FLAG, &phid->lock);
@@ -572,7 +580,14 @@ CPhidget_getDeviceName(CPhidgetHandle phid, const char **buffer)
 		&& !CPhidget_statusFlagIsSet(phid->status, PHIDGET_DETACHING_FLAG))
 		return EPHIDGET_NOTATTACHED;
 
-	*buffer = (char *)phid->deviceDef->pdd_name;
+	if(phid->deviceIDSpec == PHIDID_FIRMWARE_UPGRADE)
+	{
+		if(!phid->firmwareUpgradeName[0])
+			snprintf(phid->firmwareUpgradeName, 30, "%s %s", phid->usbProduct, phid->deviceDef->pdd_name);
+		*buffer = phid->firmwareUpgradeName;
+	}
+	else
+		*buffer = (char *)phid->deviceDef->pdd_name;
 	return EPHIDGET_OK;
 }
 
@@ -679,6 +694,18 @@ CPhidget_getDeviceClass(CPhidgetHandle phid, CPhidget_DeviceClass *deviceClass)
 }
 
 int CCONV
+CPhidget_getUSBProductString(CPhidgetHandle phid, const char **buffer)
+{
+	TESTPTRS(phid, buffer)
+	if (!CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHED_FLAG)
+		&& !CPhidget_statusFlagIsSet(phid->status, PHIDGET_DETACHING_FLAG))
+		return EPHIDGET_NOTATTACHED;
+
+	*buffer = (char *)phid->usbProduct;
+	return EPHIDGET_OK;
+}
+
+int CCONV
 CPhidget_getDeviceLabel(CPhidgetHandle phid, const char **buffer)
 {
 	TESTPTRS(phid, buffer)
@@ -718,11 +745,6 @@ CPhidget_setDeviceLabel(CPhidgetHandle phid, const char *buffer)
 	}
 	else
 	{
-		
-#if defined(_WINDOWS) && !defined(WINCE)
-		//setLabel not supported on Windows only (Windows CE does support it)
-		return EPHIDGET_UNSUPPORTED;
-#else
 		int len;
 		char buffer2[(MAX_LABEL_SIZE * 2) + 2];
 		ZEROMEM(buffer2, (MAX_LABEL_SIZE * 2) + 2);
@@ -837,7 +859,6 @@ CPhidget_setDeviceLabel(CPhidgetHandle phid, const char *buffer)
 		buffer2[1] = 3;
 		CUSBSetLabel(phid, buffer2);
 		return ret;
-#endif
 	}
 }
 
@@ -1261,6 +1282,7 @@ int attachActiveDevice(CPhidgetHandle activeDevice, CPhidgetHandle attachedDevic
 	activeDevice->CPhidgetFHandle = malloc(wcslen(attachedDevice->CPhidgetFHandle)*sizeof(WCHAR)+10);
 	wcsncpy((WCHAR *)activeDevice->CPhidgetFHandle, attachedDevice->CPhidgetFHandle, wcslen(attachedDevice->CPhidgetFHandle)+1);
 	activeDevice->deviceIDSpec = attachedDevice->deviceIDSpec;
+	activeDevice->deviceUID = attachedDevice->deviceUID;
 	activeDevice->deviceDef = attachedDevice->deviceDef;
 #endif
 #endif
@@ -1269,6 +1291,7 @@ int attachActiveDevice(CPhidgetHandle activeDevice, CPhidgetHandle attachedDevic
 	//Android also uses the file handle to open the device
 	activeDevice->CPhidgetFHandle = strdup(attachedDevice->CPhidgetFHandle);
 	activeDevice->deviceIDSpec = attachedDevice->deviceIDSpec;
+	activeDevice->deviceUID = attachedDevice->deviceUID;
 	activeDevice->deviceDef = attachedDevice->deviceDef;
 #endif
 
@@ -1287,6 +1310,7 @@ int attachActiveDevice(CPhidgetHandle activeDevice, CPhidgetHandle attachedDevic
 			activeDevice->serialNumber = -1;
 		}
 		activeDevice->deviceIDSpec = 0;
+		activeDevice->deviceUID = 0;
 		return result;
 	}
 	
@@ -1541,6 +1565,73 @@ int labelHasWrapError(int serialNumber, char *labelBuf)
 	return PFALSE;
 }
 
+int UTF16toUTF8(char *in, int inLen, char *out)
+{
+#ifdef USE_INTERNAL_UNICONV
+		unsigned char *utf8string = (unsigned char *)out;
+		unsigned char *utf8stringEnd = utf8string + MAX_LABEL_STORAGE;
+		unichar *utf16string = (unichar *)in;
+		unichar *utf16stringEnd = utf16string + (inLen / 2);
+		ConversionResult resp;
+		resp = NSConvertUTF16toUTF8(&utf16string, utf16stringEnd, &utf8string, utf8stringEnd);
+		
+		if(resp != ok)
+		{
+			switch(resp)
+			{
+				case sourceExhausted:
+					LOG (PHIDGET_LOG_WARNING, "source exhausted error.");
+					break;
+				case targetExhausted:
+					LOG (PHIDGET_LOG_WARNING, "target exhausted error.");
+					break;
+				default:
+					LOG (PHIDGET_LOG_WARNING, "unexpected error.");
+					return EPHIDGET_UNEXPECTED;
+			}
+			return EPHIDGET_INVALIDARG;
+		}
+#else
+ #ifndef _WINDOWS
+		char *utf16string = in;
+		char *utf8string = (char *)out;
+		size_t inBytes = inLen; // Up to MAX_LABEL_STORAGE bytes read
+		size_t outBytes = (MAX_LABEL_STORAGE); //UTF-16 characters are two bytes each.
+		iconv_t conv;
+		size_t resp;
+		conv= iconv_open("UTF-8", "UTF-16LE");
+		if (conv == (iconv_t)(-1))
+			return EPHIDGET_UNEXPECTED;
+		
+		resp = iconv(conv, &utf16string, &inBytes, &utf8string, &outBytes);
+		
+		iconv_close(conv);
+		
+		if (resp == (size_t) -1) {
+			switch (errno) {
+				case EILSEQ:
+				case EINVAL:
+				case E2BIG:
+				default:
+					LOG (PHIDGET_LOG_ERROR, "Unexpected error converting string to UTF-8: %s.", strerror (errno));
+					return EPHIDGET_UNEXPECTED;
+			}
+		}
+ #else
+		//stringData in NULL terminated
+		int bytesWritten = WideCharToMultiByte(CP_UTF8, 0, (wchar_t *)in, -1, out, MAX_LABEL_STORAGE+1, NULL, NULL);
+
+		//Error
+		if(!bytesWritten)
+		{
+			LOG(PHIDGET_LOG_ERROR, "Unable to convert string to UTF-8!");
+			return EPHIDGET_UNEXPECTED;
+		}
+ #endif
+#endif
+	return EPHIDGET_OK;
+}
+
 //takes the label string buffer from the USB device and outputs a UTF-8 version
 int decodeLabelString(char *labelBuf, char *out, int serialNumber)
 {
@@ -1567,71 +1658,382 @@ int decodeLabelString(char *labelBuf, char *out, int serialNumber)
 	//otherwise it's stored as UTF-16LE
 	else
 	{
-#ifdef USE_INTERNAL_UNICONV
-		unsigned char *utf8label = (unsigned char *)out;
-		unsigned char *utf8labelEnd = utf8label + MAX_LABEL_STORAGE;
-		unichar *utf16label = (unichar *)&labelBuf[2];
-		unichar *utf16labelEnd = utf16label + ((labelBuf[0]-2) / 2);
-		ConversionResult resp;
-		resp = NSConvertUTF16toUTF8(&utf16label, utf16labelEnd, &utf8label, utf8labelEnd);
-		
-		if(resp != ok)
-		{
-			switch(resp)
-			{
-				case sourceExhausted:
-					LOG (PHIDGET_LOG_WARNING, "source exhausted error.");
-					break;
-				case targetExhausted:
-					LOG (PHIDGET_LOG_WARNING, "target exhausted error.");
-					break;
-				default:
-					LOG (PHIDGET_LOG_WARNING, "unexpected error.");
-					return EPHIDGET_UNEXPECTED;
-			}
-			return EPHIDGET_INVALIDARG;
-		}
-		
-#else
-	
- #ifndef _WINDOWS
-		char *utf16label = &labelBuf[2];
-		char *utf8label = (char *)out;
-		size_t inBytes = labelBuf[0]-2; // Up to MAX_LABEL_STORAGE bytes read
-		size_t outBytes = (MAX_LABEL_STORAGE); //UTF-16 characters are two bytes each.
-		iconv_t conv;
-		size_t resp;
-		conv= iconv_open("UTF-8", "UTF-16LE");
-		if (conv == (iconv_t)(-1))
-			return EPHIDGET_UNEXPECTED;
-		
-		resp = iconv(conv, &utf16label, &inBytes, &utf8label, &outBytes);
-		
-		iconv_close(conv);
-		
-		if (resp == (size_t) -1) {
-			switch (errno) {
-				case EILSEQ:
-				case EINVAL:
-				case E2BIG:
-				default:
-					LOG (PHIDGET_LOG_ERROR, "Unexpected error converting label to UTF-8: %s.", strerror (errno));
-					return EPHIDGET_UNEXPECTED;
-			}
-		}
- #else
-		//labelData in NULL terminated
-		int bytesWritten = WideCharToMultiByte(CP_UTF8, 0, (wchar_t *)&labelBuf[2], -1, out, MAX_LABEL_STORAGE+1, NULL, NULL);
-
-		//Error
-		if(!bytesWritten)
-		{
-			LOG(PHIDGET_LOG_ERROR, "Unable to convert label to UTF-8!");
-			return EPHIDGET_UNEXPECTED;
-		}
- #endif
-#endif
+		return UTF16toUTF8(&labelBuf[2], labelBuf[0]-2, out);
 	}
 	
 	return EPHIDGET_OK;
+}
+
+CPhidget_DeviceUID CPhidget_getUID(CPhidget_DeviceID id, int version)
+{
+	const CPhidgetUniqueDeviceDef *uidList = Phid_Unique_Device_Def;
+	int i = 0;
+
+	while (uidList->pdd_uid)
+	{
+		if(uidList->pdd_id == id && version >= uidList->pdd_vlow && version < uidList->pdd_vhigh)\
+			return uidList->pdd_uid;
+		i++;
+		uidList++;
+	}
+
+	//Should never get here!
+	LOG(PHIDGET_LOG_DEBUG, "We have a Phidgets that doesn't match and Device UID!");
+	return PHIDUID_NOTHING;
+}
+
+
+
+/**
+ * General Packet Protocol
+ *
+ * These are devices on the new M3. They all support this protocol.
+ *  MSB is set is buf[0] for incoming and outgoing packets.
+ */
+
+int deviceSupportsGeneralUSBProtocol(CPhidgetHandle phid)
+{
+	switch(phid->deviceUID)
+	{
+		case PHIDUID_SPATIAL_ACCEL_3AXIS_1041:
+		case PHIDUID_SPATIAL_ACCEL_3AXIS_1043:
+		case PHIDUID_SPATIAL_ACCEL_GYRO_COMPASS_1042:
+		case PHIDUID_SPATIAL_ACCEL_GYRO_COMPASS_1044:
+		case PHIDUID_LED_64_ADV_M3:
+		case PHIDUID_RFID_2OUTPUT_READ_WRITE:
+			return PTRUE;
+
+		case PHIDUID_FIRMWARE_UPGRADE:
+			return PTRUE;
+
+		case PHIDUID_GENERIC:
+			return PTRUE;
+
+		default:
+			return PFALSE;
+	}
+}
+
+static int CPhidgetGPP_dataInput(CPhidgetHandle phid, unsigned char *buffer, int length)
+{
+	int result = EPHIDGET_OK;
+
+	//if response bits are set (0x00 is ignore), then store response
+	if(buffer[0] & 0x3f)
+		phid->GPPResponse = buffer[0];
+
+	return result;
+}
+
+int GPP_getResponse(CPhidgetHandle phid, int packetType, int timeout)
+{
+	while((phid->GPPResponse & 0x3f) != packetType && timeout > 0)
+	{
+		SLEEP(20);
+		timeout -= 20;
+	}
+
+	//Didn't get the response!
+	if((phid->GPPResponse & 0x3f) != packetType)
+	{
+		return EPHIDGET_TIMEOUT;
+	}
+
+	if(phid->GPPResponse & PHID_USB_GENERAL_PACKET_FAIL)
+		return EPHIDGET_UNEXPECTED;
+
+	return EPHIDGET_OK;
+}
+
+int CCONV CPhidgetGPP_upgradeFirmware(CPhidgetHandle phid, unsigned char *data, int length)
+{
+	int result, i, j, index, indexEnd;
+	unsigned char *buffer;
+	TESTPTR(phid)
+	if (!CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHED_FLAG))
+		return EPHIDGET_NOTATTACHED;
+
+	if(!deviceSupportsGeneralUSBProtocol(phid))
+		return EPHIDGET_UNSUPPORTED;
+
+	buffer = (unsigned char *) malloc(phid->outputReportByteLength);
+	ZEROMEM(buffer, phid->outputReportByteLength);
+	
+	CThread_mutex_lock(&phid->writelock);
+
+	phid->GPPResponse = 0;
+
+	index = ((length & 0xf000) >> 12) + 1;
+	indexEnd = length & 0xfff;
+	j = 0;
+	while (index)
+	{
+		int secLength = length - ((index - 1) * 0x1000);
+		if(secLength > 0x1000) secLength = 0x1000;
+
+		buffer[0] = PHID_USB_GENERAL_PACKET_FLAG | PHID_USB_GENERAL_PACKET_FIRMWARE_UPGRADE_WRITE_SECTOR;
+		buffer[1] = index;
+		buffer[2] = secLength;
+		buffer[3] = secLength >> 8;
+
+		for(i=4;i<phid->outputReportByteLength && j<indexEnd;i++,j++)
+			buffer[i] = data[j];
+
+		if((result = CUSBSendPacket((CPhidgetHandle)phid, buffer)) != EPHIDGET_OK)
+			goto done;
+
+		while(j<indexEnd && result == EPHIDGET_OK)
+		{
+			buffer[0] = PHID_USB_GENERAL_PACKET_FLAG | PHID_USB_GENERAL_PACKET_CONTINUATION;
+			for(i=1;i<phid->outputReportByteLength && j<indexEnd;i++,j++)
+				buffer[i] = data[j];
+
+			if((result = CUSBSendPacket((CPhidgetHandle)phid, buffer)) != EPHIDGET_OK)
+				goto done;
+		}
+		index--;
+		indexEnd+=0x1000;
+	}
+
+done:
+
+	result = GPP_getResponse(phid, PHID_USB_GENERAL_PACKET_FIRMWARE_UPGRADE_WRITE_SECTOR, 200);
+
+	CThread_mutex_unlock(&phid->writelock);
+
+	free(buffer);
+
+	return result;
+}
+
+int CCONV CPhidgetGPP_eraseFirmware(CPhidgetHandle phid)
+{
+	int result;
+	unsigned char *buffer;
+	TESTPTR(phid)
+	if (!CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHED_FLAG))
+		return EPHIDGET_NOTATTACHED;
+
+	if(!deviceSupportsGeneralUSBProtocol(phid))
+		return EPHIDGET_UNSUPPORTED;
+
+	buffer = (unsigned char *) malloc(phid->outputReportByteLength);
+	ZEROMEM(buffer, phid->outputReportByteLength);
+	
+	buffer[0] = PHID_USB_GENERAL_PACKET_FLAG | PHID_USB_GENERAL_PACKET_FIRMWARE_UPGRADE_ERASE;
+	
+	CThread_mutex_lock(&phid->writelock);
+
+	phid->GPPResponse = 0;
+	if((result = CUSBSendPacket((CPhidgetHandle)phid, buffer)) == EPHIDGET_OK)
+		result = GPP_getResponse(phid, PHID_USB_GENERAL_PACKET_FIRMWARE_UPGRADE_ERASE, 200);
+
+	CThread_mutex_unlock(&phid->writelock);
+	free(buffer);
+
+	return result;
+}
+
+int CCONV CPhidgetGPP_eraseConfig(CPhidgetHandle phid)
+{
+	int result;
+	unsigned char *buffer;
+	TESTPTR(phid)
+	if (!CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHED_FLAG))
+		return EPHIDGET_NOTATTACHED;
+
+	if(!deviceSupportsGeneralUSBProtocol(phid))
+		return EPHIDGET_UNSUPPORTED;
+
+	buffer = (unsigned char *) malloc(phid->outputReportByteLength);
+	ZEROMEM(buffer, phid->outputReportByteLength);
+	
+	buffer[0] = PHID_USB_GENERAL_PACKET_FLAG | PHID_USB_GENERAL_PACKET_ERASE_CONFIG;
+	
+	CThread_mutex_lock(&phid->writelock);
+
+	phid->GPPResponse = 0;
+	if((result = CUSBSendPacket((CPhidgetHandle)phid, buffer)) == EPHIDGET_OK)
+		result = GPP_getResponse(phid, PHID_USB_GENERAL_PACKET_ERASE_CONFIG, 200);
+
+	CThread_mutex_unlock(&phid->writelock);
+	free(buffer);
+
+	return result;
+}
+
+int CCONV CPhidgetGPP_reboot_firmwareUpgrade(CPhidgetHandle phid)
+{
+	int result;
+	unsigned char *buffer;
+	TESTPTR(phid)
+	if (!CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHED_FLAG))
+		return EPHIDGET_NOTATTACHED;
+
+	if(!deviceSupportsGeneralUSBProtocol(phid))
+		return EPHIDGET_UNSUPPORTED;
+
+	buffer = (unsigned char *) malloc(phid->outputReportByteLength);
+	ZEROMEM(buffer, phid->outputReportByteLength);
+	
+	buffer[0] = PHID_USB_GENERAL_PACKET_FLAG | PHID_USB_GENERAL_PACKET_REBOOT_FIRMWARE_UPGRADE;
+	
+	//Stop the read/write threads first	
+	phid->writeStopFlag = PTRUE;
+	CThread_join(&phid->writeThread);
+	CPhidget_clearStatusFlag(&phid->status, PHIDGET_ATTACHED_FLAG, &phid->lock);
+	CThread_join(&phid->readThread);
+	CPhidget_setStatusFlag(&phid->status, PHIDGET_ATTACHED_FLAG, &phid->lock);
+	
+	//Then send the command
+	result = CUSBSendPacket((CPhidgetHandle)phid, buffer);
+
+	free(buffer);
+
+	return result;
+}
+
+int CCONV CPhidgetGPP_reboot_ISP(CPhidgetHandle phid)
+{
+	int result;
+	unsigned char *buffer;
+	TESTPTR(phid)
+	if (!CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHED_FLAG))
+		return EPHIDGET_NOTATTACHED;
+
+	if(!deviceSupportsGeneralUSBProtocol(phid))
+		return EPHIDGET_UNSUPPORTED;
+
+	buffer = (unsigned char *) malloc(phid->outputReportByteLength);
+	ZEROMEM(buffer, phid->outputReportByteLength);
+	
+	buffer[0] = PHID_USB_GENERAL_PACKET_FLAG | PHID_USB_GENERAL_PACKET_REBOOT_ISP;
+	
+	result = CUSBSendPacket((CPhidgetHandle)phid, buffer);
+
+	free(buffer);
+
+	return result;
+}
+
+int CCONV CPhidgetGPP_writeFlash(CPhidgetHandle phid)
+{
+	int result;
+	unsigned char *buffer;
+	TESTPTR(phid)
+	if (!CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHED_FLAG))
+		return EPHIDGET_NOTATTACHED;
+
+	if(!deviceSupportsGeneralUSBProtocol(phid))
+		return EPHIDGET_UNSUPPORTED;
+
+	buffer = (unsigned char *) malloc(phid->outputReportByteLength);
+	ZEROMEM(buffer, phid->outputReportByteLength);
+	
+	buffer[0] = PHID_USB_GENERAL_PACKET_FLAG | PHID_USB_GENERAL_PACKET_WRITE_FLASH;
+	
+	result = CUSBSendPacket((CPhidgetHandle)phid, buffer);
+
+	free(buffer);
+
+	return result;
+}
+
+int CCONV CPhidgetGPP_zeroConfig(CPhidgetHandle phid)
+{
+	int result;
+	unsigned char *buffer;
+	TESTPTR(phid)
+	if (!CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHED_FLAG))
+		return EPHIDGET_NOTATTACHED;
+
+	if(!deviceSupportsGeneralUSBProtocol(phid))
+		return EPHIDGET_UNSUPPORTED;
+
+	buffer = (unsigned char *) malloc(phid->outputReportByteLength);
+	ZEROMEM(buffer, phid->outputReportByteLength);
+	
+	buffer[0] = PHID_USB_GENERAL_PACKET_FLAG | PHID_USB_GENERAL_PACKET_ZERO_CONFIG;
+	
+	result = CUSBSendPacket((CPhidgetHandle)phid, buffer);
+
+	free(buffer);
+
+	return result;
+}
+
+int CCONV CPhidgetGPP_setLabel(CPhidgetHandle phid, const char *label)
+{
+	unsigned char buffer[26] = {0};
+	int result;
+	TESTPTR(phid)
+	if (!CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHED_FLAG))
+		return EPHIDGET_NOTATTACHED;
+
+	if(!deviceSupportsGeneralUSBProtocol(phid))
+		return EPHIDGET_UNSUPPORTED;
+
+	//Label Table Header is: 0x0010001A
+    buffer[3] = 0x00; //header high byte
+    buffer[2] = 0x10;
+    buffer[1] = 0x00;
+    buffer[0] = 0x1a; //header low byte
+
+	memcpy(buffer+4, label, label[0]);
+
+	//Label Table index is: 0
+	if((result=CPhidgetGPP_setDeviceWideConfigTable(phid, buffer, 26, 0))==EPHIDGET_OK)
+		return CPhidgetGPP_writeFlash(phid);
+	return result;
+}
+
+static int CPhidgetGPP_setConfigTable(CPhidgetHandle phid, unsigned char *data, int length, int index, int packetType)
+{
+	int result, i, j;
+	unsigned char *buffer;
+	TESTPTR(phid)
+	if (!CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHED_FLAG))
+		return EPHIDGET_NOTATTACHED;
+
+	if(!deviceSupportsGeneralUSBProtocol(phid))
+		return EPHIDGET_UNSUPPORTED;
+
+	buffer = (unsigned char *) malloc(phid->outputReportByteLength);
+	ZEROMEM(buffer, phid->outputReportByteLength);
+	
+	buffer[0] = PHID_USB_GENERAL_PACKET_FLAG | packetType;
+	buffer[1] = index;
+	for(i=2,j=0;i<phid->outputReportByteLength && j<length;i++,j++)
+		buffer[i] = data[j];
+
+	CThread_mutex_lock(&phid->writelock);
+
+	if((result = CUSBSendPacket((CPhidgetHandle)phid, buffer)) != EPHIDGET_OK)
+		goto done;
+
+	while(j<length && result == EPHIDGET_OK)
+	{
+		buffer[0] = PHID_USB_GENERAL_PACKET_FLAG | PHID_USB_GENERAL_PACKET_CONTINUATION;
+		for(i=1;i<phid->outputReportByteLength && j<length;i++,j++)
+			buffer[i] = data[j];
+		if((result = CUSBSendPacket((CPhidgetHandle)phid, buffer)) != EPHIDGET_OK)
+			goto done;
+	}
+
+done:
+	CThread_mutex_unlock(&phid->writelock);
+
+	free(buffer);
+
+	return result;
+}
+
+int CCONV CPhidgetGPP_setDeviceSpecificConfigTable(CPhidgetHandle phid, unsigned char *data, int length, int index)
+{
+	return CPhidgetGPP_setConfigTable(phid, data, length, index, PHID_USB_GENERAL_PACKET_SET_DS_TABLE);
+}
+
+int CCONV CPhidgetGPP_setDeviceWideConfigTable(CPhidgetHandle phid, unsigned char *data, int length, int index)
+{
+	return CPhidgetGPP_setConfigTable(phid, data, length, index, PHID_USB_GENERAL_PACKET_SET_DW_TABLE);
 }

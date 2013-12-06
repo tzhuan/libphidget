@@ -310,7 +310,7 @@ CPHIDGETDATA(AdvancedServo)
 		else
 			phid->motorPositionEcho[i] = position[i];
 		if(velocity[i] > phid->velocityMaxLimit || velocity[i] < -phid->velocityMaxLimit)
-			LOG(PHIDGET_LOG_WARNING, "Phidget advanced servo recieved out of range velocity data: %lE", velocity[i]);
+			LOG(PHIDGET_LOG_WARNING, "Phidget advanced servo received out of range velocity data: %lE", velocity[i]);
 		else
 			phid->motorVelocityEcho[i] = velocity[i];
 
@@ -321,7 +321,7 @@ CPHIDGETDATA(AdvancedServo)
 	}
 
 	//make sure phid->motorStoppedState isn't updated until the other data is filled in
-	CThread_mutex_lock(&phid->phid.writelock);
+	CThread_mutex_lock(&phid->phid.outputLock);
 	for (i = 0; i < phid->phid.attr.stepper.numMotors; i++)
 	{
 		int pwm = round(phid->motorPosition[i] * 12.0);
@@ -337,7 +337,7 @@ CPHIDGETDATA(AdvancedServo)
 		else if(motorDone[i] == PFALSE)
 			phid->motorStoppedState[i] = PFALSE;
 	}
-	CThread_mutex_unlock(&phid->phid.writelock);
+	CThread_mutex_unlock(&phid->phid.outputLock);
 
 	//send out any events for changed data
 	//only send a position event if the motor is engaged
@@ -381,13 +381,15 @@ CSENDPACKET_BUF(AdvancedServo)
 
 //makePacket - constructs a packet using current device state
 CMAKEPACKETINDEXED(AdvancedServo)
-	int pwm = 0, velocity = 0, accel = 0, minpwm=0, maxpwm=0;
+	int pwm = 0, velocity = 0, accel = 0, minpwm=0, maxpwm=0, retval=EPHIDGET_OK;
 	unsigned char flags = 0;
 
 	int packet_type = Index & 0x10;
 	Index = Index & 0x07;
 
 	TESTPTRS(phid, buffer);
+
+	CThread_mutex_lock(&phid->phid.outputLock);
 
 	if(phid->packetCounter[Index] == PUNK_INT)
 		phid->packetCounter[Index] = 0;
@@ -457,17 +459,20 @@ CMAKEPACKETINDEXED(AdvancedServo)
 						buffer[7] = 0;
 						break;
 					default:
-						return EPHIDGET_UNEXPECTED;
+						retval = EPHIDGET_UNEXPECTED;
+						break;
 				}
 			}
 			else
-				return EPHIDGET_UNEXPECTED;
+				retval = EPHIDGET_UNEXPECTED;
 			break;
 		default:
-			return EPHIDGET_UNEXPECTED;
+			retval = EPHIDGET_UNEXPECTED;
+			break;
 	}
 
-	return EPHIDGET_OK;
+	CThread_mutex_unlock(&phid->phid.outputLock);
+	return retval;
 }
 
 // === Servo Definitions === //
@@ -570,8 +575,8 @@ CSETINDEX(AdvancedServo,Acceleration,double)
 	TESTDEVICETYPE(PHIDCLASS_ADVANCEDSERVO)
 	TESTATTACHED
 	TESTINDEX(phid.attr.advancedservo.numMotors)
-	TESTRANGE(servo_us_to_degrees_vel(phid->servoParams[Index], phid->accelerationMin, PFALSE), 
-		servo_us_to_degrees_vel(phid->servoParams[Index], phid->accelerationMax, PFALSE))
+	TESTRANGE(servo_us_to_degrees_vel(phid->servoParams[Index], phid->accelerationMin, PFALSE)-0.5, 
+		servo_us_to_degrees_vel(phid->servoParams[Index], phid->accelerationMax, PFALSE)+0.5)
 
 	newVal = servo_degrees_to_us_vel(phid->servoParams[Index], newVal);
 
@@ -620,8 +625,8 @@ CSETINDEX(AdvancedServo,VelocityLimit,double)
 	TESTDEVICETYPE(PHIDCLASS_ADVANCEDSERVO)
 	TESTATTACHED
 	TESTINDEX(phid.attr.advancedservo.numMotors)
-	TESTRANGE(servo_us_to_degrees_vel(phid->servoParams[Index], phid->velocityMin, PTRUE)-0.5, 
-		servo_us_to_degrees_vel(phid->servoParams[Index], phid->velocityMax[Index]+0.5, PTRUE))
+	TESTRANGE(servo_us_to_degrees_vel(phid->servoParams[Index], phid->velocityMin, PFALSE)-0.5, 
+		servo_us_to_degrees_vel(phid->servoParams[Index], phid->velocityMax[Index], PFALSE)+0.5)
 
 	newVal = servo_degrees_to_us_vel(phid->servoParams[Index], newVal);
 
@@ -684,8 +689,8 @@ CSETINDEX(AdvancedServo,Position,double)
 	TESTDEVICETYPE(PHIDCLASS_ADVANCEDSERVO)
 	TESTATTACHED
 	TESTINDEX(phid.attr.advancedservo.numMotors)
-	TESTRANGE(servo_us_to_degrees(phid->servoParams[Index], phid->motorPositionMin[Index], PTRUE)-0.5, 
-		servo_us_to_degrees(phid->servoParams[Index], phid->motorPositionMax[Index], PTRUE)+0.5)
+	TESTRANGE(servo_us_to_degrees(phid->servoParams[Index], phid->motorPositionMin[Index], PFALSE)-0.5, 
+		servo_us_to_degrees(phid->servoParams[Index], phid->motorPositionMax[Index], PFALSE)+0.5)
 
 	newVal = servo_degrees_to_us(phid->servoParams[Index], newVal);
 

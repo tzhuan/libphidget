@@ -12,12 +12,18 @@ int CUSBSetLabel(CPhidgetHandle phid, char *buffer);
 void CUSBCleanup();
 int CUSBSetupNotifications();
 int CUSBRefreshLabelString(CPhidgetHandle phid);
+int CUSBGetString(CPhidgetHandle phid, int index, char *str);
 #if defined(_LINUX) && !defined(_ANDROID)
-int CUSBGetDeviceCapabilities(CPhidgetHandle phid, struct usb_device *dev,
-    struct usb_dev_handle *udev);
+void CUSBUninit();
 #else
 int CUSBGetDeviceCapabilities(CPhidgetHandle phid, HANDLE DeviceHandle);
 #endif
+#endif
+
+#ifdef _IPHONE
+int CPhidgetManager_setupNotifications(CFRunLoopRef runloop);
+int CPhidgetManager_teardownNotifications();
+int reenumerateDevice(CPhidgetHandle phid);
 #endif
 
 PHIDGET21_API int CCONV CUSBReadPacket(CPhidgetHandle phidA, unsigned char *buffer);

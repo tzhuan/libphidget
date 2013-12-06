@@ -170,37 +170,55 @@ int CCONV CPhidgetDictionary_removeKey(CPhidgetDictionaryHandle dict, const char
 
 int CCONV CPhidgetDictionary_getKey(CPhidgetDictionaryHandle dict, const char *key, char *val, int vallen)
 {
-	int result, size;
-	char err[1024], *keywrap;
+	int ret;
+
 	TESTPTRS(dict, key)
 	TESTPTR(val)
 
 	CThread_mutex_lock(&dict->lock);
 	if(!CPhidget_statusFlagIsSet(dict->status, PHIDGET_SERVER_CONNECTED_FLAG))
 	{
-		CThread_mutex_unlock(&dict->lock);
-		return EPHIDGET_NETWORK_NOTCONNECTED;
+		ret = EPHIDGET_NETWORK_NOTCONNECTED;
 	}
-
-	//The get command returns a list of keys - since we want just a single key, lets wrap in ^ and $
-	//other reg exp tags are allowed and will be honoured
-	size = (int)strlen(key);
-	keywrap = (char *)malloc(size+3);
-	snprintf(keywrap, size+3, "^%s$",key);
-
-	CThread_mutex_lock(&dict->networkInfo->server->pdc_lock);
-	if(!dict->networkInfo->server->pdcs)
-		result = EPHIDGET_NETWORK_NOTCONNECTED;
 	else
-		result = pdc_get(dict->networkInfo->server->pdcs, keywrap, val, vallen, err, sizeof(err));
-	CThread_mutex_unlock(&dict->networkInfo->server->pdc_lock);
+	{
+		int result, size;
+		char err[1024], *keywrap;
 
-	free(keywrap);
+		//The get command returns a list of keys - since we want just a single key, lets wrap in ^ and $
+		//other reg exp tags are allowed and will be honoured
+		size = (int)strlen(key);
+		keywrap = (char *)malloc(size+3);
+		snprintf(keywrap, size+3, "^%s$",key);
+
+		CThread_mutex_lock(&dict->networkInfo->server->pdc_lock);
+		if(!dict->networkInfo->server->pdcs)
+			ret = EPHIDGET_NETWORK_NOTCONNECTED;
+		else
+		{
+			result = pdc_get(dict->networkInfo->server->pdcs, keywrap, val, vallen, err, sizeof(err));
+			switch(result)
+			{
+				case 1:
+					ret = EPHIDGET_OK;
+					break;
+				case 2:
+					ret = EPHIDGET_NOTFOUND;
+					break;
+				case 0:
+				default:
+					ret = EPHIDGET_UNEXPECTED;
+					break;
+			}
+		}
+		CThread_mutex_unlock(&dict->networkInfo->server->pdc_lock);
+
+		free(keywrap);
+	}
 
 	CThread_mutex_unlock(&dict->lock);
 
-	if(result == 0) return EPHIDGET_UNEXPECTED;
-	return EPHIDGET_OK;
+	return ret;
 }
 
 void dict_event_handler(const char *key, const char *val, unsigned int len, pdict_reason_t reason, void *ptr)

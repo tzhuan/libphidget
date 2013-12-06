@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2011 Phidgets Inc.  All rights reserved.
+ * Copyright 2012 Phidgets Inc.  All rights reserved.
  */
 
 package com.phidgets;
@@ -10,6 +10,9 @@ import com.phidgets.event.*;
 /**
  * This class represents a Phidget Bridge. All methods
  * to manipulate the Phidget Bridge are implemented in this class.
+ * See your device's User Guide for more specific API details, 
+ * technical information, and revision details. The User Guide, along with other resources, can be found on 
+ * the product page for your device.
  * <p>
  * 
  * @author Phidgets Inc.

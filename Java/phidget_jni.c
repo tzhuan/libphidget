@@ -27,20 +27,43 @@ jmethodID serverConnectEvent_cons;
 jclass serverDisconnectEvent_class;
 jmethodID serverDisconnectEvent_cons;
 
+#ifdef _WINDOWS
+
+extern int useThreadSecurity;
+extern void destroyThreadSecurityAttributes();
+
+#endif
+
+static void detachCurrentThreadFromJavaVM(void)
+{
+	JNIEnv *env;
+	if(ph_vm != NULL && *ph_vm != NULL)
+	{
+		if((*ph_vm)->GetEnv(ph_vm, (void **)&env, JNI_VERSION_1_4) != JNI_EDETACHED)
+		{
+			(*ph_vm)->DetachCurrentThread(ph_vm);
+		}
+	}
+}
+
 jint JNICALL
 JNI_OnLoad(JavaVM *vm, void *reserved)
 {
 	JNIEnv *env;
 	jint version = 0;
-	jint result;
 
 	ph_vm = vm;
 
-	result = (*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_4);
+	// Don't set thread security when we're using Java -  this break events.
+	#ifdef _WINDOWS
+		useThreadSecurity = PFALSE;
+		destroyThreadSecurityAttributes();
+	#endif
 	
-	if(result == JNI_EDETACHED)
-		if ((*vm)->AttachCurrentThread(vm, (JNIEnvPtr)&env, NULL))
-			JNI_ABORT_STDERR("Couldn't Attach Thread");
+	if((*ph_vm)->GetEnv(ph_vm, (void **)&env, JNI_VERSION_1_4) != JNI_OK)
+	{
+		return -1;
+	}
 	
 	if(!(version = (*env)->GetVersion(env)))
 		JNI_ABORT_STDERR("Couldn't get version");
@@ -127,6 +150,9 @@ JNI_OnLoad(JavaVM *vm, void *reserved)
 	com_phidgets_TextLCDPhidget_OnLoad(env);
 	com_phidgets_TextLEDPhidget_OnLoad(env);
 	com_phidgets_WeightSensorPhidget_OnLoad(env);
+
+	//So the main library can detach threads from java before they exit.
+	fptrJavaDetachCurrentThread = detachCurrentThreadFromJavaVM;
 	
 #ifdef _ANDROID
 	if(com_phidgets_usb_Phidget_OnLoad(env) && com_phidgets_usb_Manager_OnLoad(env))

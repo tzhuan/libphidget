@@ -106,7 +106,7 @@
 #define MAX_LABEL_STORAGE				MAX_LABEL_SIZE*4+1
 
 #define MAX_IN_PACKET_SIZE				64
-#define MAX_OUT_PACKET_SIZE				32
+#define MAX_OUT_PACKET_SIZE				64
 
 #define PHIDGETOPEN_ANY				0x00
 #define PHIDGETOPEN_SERIAL			0x01
@@ -124,7 +124,7 @@
 // this needs to reflect the size of Phid_DeviceName
 #define PHIDGET_DEVICE_CLASS_COUNT		24
 // this needs to reflect the size of Phid_Device_Def (not including the null end)
-#define PHIDGET_DEVICE_COUNT			54
+#define PHIDGET_DEVICE_COUNT			55
 
 #endif
 

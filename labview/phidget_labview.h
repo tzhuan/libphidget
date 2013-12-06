@@ -255,13 +255,13 @@ typedef struct _lvIRLearn {
 } lvIRLearn;
 
 /**
- * Used for Labview events that return an rfid tag (advanced)
+ * Used for Labview events that return an rfid tag (v2)
  */
-typedef struct _lvRFIDTagAdvanced {
-	int32 nothing;			/**< Not Used */
+typedef struct _lvRFIDTag2 {
 	LStrHandle val1;			/**< Tag String */
-	CPhidgetRFID_TagInfo val2;	/**< tag properties */
-} lvRFIDTagAdvanced;
+	CPhidgetRFID_Protocol val2;	/**< tag protocol */
+	int32 nothing;			/**< Not Used */
+} lvRFIDTag2;
 
 /**
  * Used for Labview events that return spatial data
@@ -550,19 +550,19 @@ LV_CHDREVENT(RFID, TagLost)
  */
 LV_CHDREVENT(RFID, RawData)
 /**
- * Sets up a Labview event callback for the TagAdvanced event.
- * Event callback returns an \ref _lvRFIDTagAdvanced.
+ * Sets up a Labview event callback for the Tag2 event.
+ * Event callback returns an \ref _lvRFIDTag2.
  * @param phid An attached phidget handle.
  * @param lvEventRef Lavbiew user event ref
  */
-LV_CHDREVENT(RFID, TagAdvanced)
+LV_CHDREVENT(RFID, Tag2)
 /**
- * Sets up a Labview event callback for the TagLostAdvanced event.
- * Event callback returns an \ref _lvRFIDTagAdvanced.
+ * Sets up a Labview event callback for the TagLost2 event.
+ * Event callback returns an \ref _lvRFIDTag2.
  * @param phid An attached phidget handle.
  * @param lvEventRef Lavbiew user event ref
  */
-LV_CHDREVENT(RFID, TagLostAdvanced)
+LV_CHDREVENT(RFID, TagLost2)
 
 /**
  * Sets up a Labview event callback for the PositionChange event.

@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2011 Phidgets Inc.  All rights reserved.
+ * Copyright 2012 Phidgets Inc.  All rights reserved.
  */
 
 package com.phidgets;
@@ -8,13 +8,16 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import com.phidgets.event.*;
 import java.util.Calendar;
-	/**
- * This class represents a Phidget GPS. All methods
- * to manipulate the Phidget GPS are implemented in this class.
- * <p>
- * 
- * @author Phidgets Inc.
- */
+/**
+* This class represents a Phidget GPS. All methods
+* to manipulate the Phidget GPS are implemented in this class.
+* See your device's User Guide for more specific API details, 
+* technical information, and revision details. The User Guide, along with other resources, can be found on 
+* the product page for your device.
+* <p>
+* 
+* @author Phidgets Inc.
+*/
 public final class GPSPhidget extends Phidget
 {
 	public GPSPhidget () throws PhidgetException

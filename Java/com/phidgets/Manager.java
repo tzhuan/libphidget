@@ -1,5 +1,5 @@
 /*
- * Copyright 2006 Phidgets Inc.  All rights reserved.
+ * Copyright 2012 Phidgets Inc.  All rights reserved.
  */
 
 package com.phidgets;
@@ -64,7 +64,7 @@ public class Manager
 	/**
 	 * The default constructor. Creating a Phidget Manager object will initialize the
 	 * attach and detach handlers internally, but {@link #open() open} still needs to be called
-	 * to actually recieve event notifications.
+	 * to actually receive event notifications.
 	 */
 	public Manager() throws PhidgetException
 	{
@@ -195,7 +195,7 @@ public class Manager
 
 	/**
 	 * Shuts down the Phidget Manager. This method should be called to close down the Phidget Manager.
-	 * Events will no longer be recieved. This method gets calledd automatically when the class is
+	 * Events will no longer be received. This method gets called automatically when the class is
 	 * destroyed so calling it is not required.
 	 */
 	public final void close() throws PhidgetException {

@@ -1,5 +1,5 @@
                           Phidgets for Linux
-                    Version 2.1.8, 22 February 2011
+                      Version 2.1.8, 3 May 2012
 
 Installation
 ============
@@ -17,10 +17,13 @@ zeroconf if it is available.
 Requirements
 ============
 
-libusb 0.1
+libusb 1.0
 
    This is generally already installed. The libusb dev files may need to
-be installed - this is usually a package called libusb-dev.
+be installed - this is usually a package called libusb-1.0-0-dev. If
+libusb-1.0 is not available, libusb-0.1 will be used as a fallback,
+however, libusb-0.1 is not recommended because of a memory leak which
+will never be fixed.
 
    Some embedded systems / older distros may need to manually set up
 the userspace USB device tree. Usually this is handled by udev and 
@@ -54,6 +57,10 @@ Options
      make LABVIEW_CINTOOLS_PATH=/usr/local/natinst/LabVIEW-2010/cintools
 	 
    Note: replace 'LabVIEW-2010' with your version
+   
+   To use old libusb-0.1
+   
+     ./configure --enable-oldlibusb
 
 Usage
 =====

@@ -118,23 +118,47 @@ public final class LEDPhidget extends Phidget
 	 */
 	public native int getLEDCount () throws PhidgetException;
 	/**
+	 * Deprecated. Use {@link #getBrightness getBrightness}
+	 */
+	public native int getDiscreteLED (int index) throws PhidgetException;
+	/**
+	 * Deprecated. Use {@link #setBrightness setBrightness}
+	 */
+	public native void setDiscreteLED (int index, int brightness) throws PhidgetException;
+	/**
 	 * Returns the brightness value of an LED. This value ranges from 0-100.
 	 * @param index LED
 	 * @return brightness
 	 * @throws PhidgetException If this Phidget is not opened and attached, or if the index is out of range. 
 	 * See {@link com.phidgets.Phidget#open(int) open} for information on determining if a device is attached.
 	 */
-	public native int getDiscreteLED (int index) throws PhidgetException;
+	public native double getBrightness (int index) throws PhidgetException;
 	/**
 	 * Sets the brightness of an LED.
-	 * Valid values are 0-100, with 0 being off and 100 being the brightest. This 0-100 value is converted internally to a
-	 6-bit value (0-63) so only 64 levels of brightness are actually possible.
+	 * Valid values are 0-100, with 0 being off and 100 being the brightest.
 	 * @param index index of the LED
 	 * @param brightness desired brightness of this LED
-	 * @throws PhidgetException If this Phidget is not opened and attached, or if the index of brightness value are out of range. 
+	 * @throws PhidgetException If this Phidget is not opened and attached, or if the index or brightness value are out of range. 
 	 * See {@link com.phidgets.Phidget#open(int) open} for information on determining if a device is attached.
 	 */
-	public native void setDiscreteLED (int index, int brightness) throws PhidgetException;
+	public native void setBrightness (int index, double brightness) throws PhidgetException;
+	/**
+	 * Returns the current limit value of an LED. This value ranges from 0-80 mA.
+	 * @param index LED
+	 * @return current limit
+	 * @throws PhidgetException If this Phidget is not opened and attached, or if the index is out of range. 
+	 * See {@link com.phidgets.Phidget#open(int) open} for information on determining if a device is attached.
+	 */
+	public native double getCurrentLimit (int index) throws PhidgetException;
+	/**
+	 * Sets the current limit of an LED.
+	 * Valid values are 0-80 mA.
+	 * @param index index of the LED
+	 * @param limit desired current limit of this LED
+	 * @throws PhidgetException If this Phidget is not opened and attached, or if the index or limit value are out of range. 
+	 * See {@link com.phidgets.Phidget#open(int) open} for information on determining if a device is attached.
+	 */
+	public native void setCurrentLimit (int index, double limit) throws PhidgetException;
 	private final void enableDeviceSpecificEvents (boolean b)
 	{
 	}

@@ -9,68 +9,71 @@ EVENT_VARS(tagGain, TagGain)
 
 JNI_LOAD(rfid, RFID)
 	EVENT_VAR_SETUP(rfid, outputChange, OutputChange, IZ, V)
-	EVENT_VAR_SETUP(rfid, tagLoss, TagLoss, Ljava/lang/String;, V)
-	EVENT_VAR_SETUP(rfid, tagGain, TagGain, Ljava/lang/String;, V)
+	EVENT_VAR_SETUP(rfid, tagLoss, TagLoss, Ljava/lang/String;I, V)
+	EVENT_VAR_SETUP(rfid, tagGain, TagGain, Ljava/lang/String;I, V)
 }
 
 EVENT_HANDLER_INDEXED(RFID, outputChange, OutputChange, 
 					  CPhidgetRFID_set_OnOutputChange_Handler, int)
 
-static int CCONV tagLoss_handler (CPhidgetRFIDHandle h, void *arg, unsigned char *);
+static int CCONV tagLoss_handler (CPhidgetRFIDHandle h, void *arg, char *, CPhidgetRFID_Protocol);
 JNIEXPORT void JNICALL Java_com_phidgets_RFIDPhidget_enableTagLossEvents (JNIEnv * env, jobject obj, jboolean b)
 {
 	jlong gr = updateGlobalRef (env, obj, nativeTagLossHandler_fid, b);
 	CPhidgetRFIDHandle h = (CPhidgetRFIDHandle) (uintptr_t) (*env)->GetLongField (env, obj, handle_fid);
-	CPhidgetRFID_set_OnTagLost_Handler (h, b ? tagLoss_handler : 0, (void *) (uintptr_t) gr);
+	CPhidgetRFID_set_OnTagLost2_Handler (h, b ? tagLoss_handler : 0, (void *) (uintptr_t) gr);
 } static int CCONV
-tagLoss_handler (CPhidgetRFIDHandle h, void *arg, unsigned char *v)
+tagLoss_handler (CPhidgetRFIDHandle h, void *arg, char *v, CPhidgetRFID_Protocol proto)
 {
 	JNIEnv *env;
 	jobject obj;
 	jobject tagLossEv;
-	char stringbuffer[20];
 	jstring jb;
-	if ((*ph_vm)->AttachCurrentThread (ph_vm, (JNIEnvPtr) &env, ((void *) 0)))
+
+	if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
 		JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
+	
 	obj = (jobject) arg;
 
-	sprintf(stringbuffer, "%02x%02x%02x%02x%02x",v[0],v[1],v[2],v[3],v[4]);
-	jb=(*env)->NewStringUTF(env, stringbuffer);
+	jb=(*env)->NewStringUTF(env, v);
 
-	if (!(tagLossEv = (*env)->NewObject (env, tagLossEvent_class, tagLossEvent_cons, obj, jb)))
+	if (!(tagLossEv = (*env)->NewObject (env, tagLossEvent_class, tagLossEvent_cons, obj, jb, (int)proto)))
 		return -1;
+	(*env)->DeleteLocalRef (env, jb);
+
 	(*env)->CallVoidMethod (env, obj, fireTagLoss_mid, tagLossEv);
 	(*env)->DeleteLocalRef (env, tagLossEv);
-	(*ph_vm)->DetachCurrentThread (ph_vm);
 	return 0;
 }
 
-static int CCONV tagGain_handler (CPhidgetRFIDHandle h, void *arg, unsigned char *);
+static int CCONV tagGain_handler (CPhidgetRFIDHandle h, void *arg, char *, CPhidgetRFID_Protocol);
 JNIEXPORT void JNICALL Java_com_phidgets_RFIDPhidget_enableTagGainEvents (JNIEnv * env, jobject obj, jboolean b)
 {
 	jlong gr = updateGlobalRef (env, obj, nativeTagGainHandler_fid, b);
 	CPhidgetRFIDHandle h = (CPhidgetRFIDHandle) (uintptr_t) (*env)->GetLongField (env, obj, handle_fid);
-	CPhidgetRFID_set_OnTag_Handler (h, b ? tagGain_handler : 0, (void *) (uintptr_t) gr);
+	CPhidgetRFID_set_OnTag2_Handler (h, b ? tagGain_handler : 0, (void *) (uintptr_t) gr);
 } static int CCONV
-tagGain_handler (CPhidgetRFIDHandle h, void *arg, unsigned char *v)
+tagGain_handler (CPhidgetRFIDHandle h, void *arg, char *v, CPhidgetRFID_Protocol proto)
 {
 	JNIEnv *env;
 	jobject obj;
 	jobject tagGainEv;
-	char stringbuffer[20];
 	jstring jb;
-	if ((*ph_vm)->AttachCurrentThread (ph_vm, (JNIEnvPtr) &env, ((void *) 0)))
+
+	if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
 		JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
+
 	obj = (jobject) arg;
 
-	sprintf(stringbuffer, "%02x%02x%02x%02x%02x",v[0],v[1],v[2],v[3],v[4]);
-	jb=(*env)->NewStringUTF(env, stringbuffer);
+	jb=(*env)->NewStringUTF(env, v);
 
-	if (!(tagGainEv = (*env)->NewObject (env, tagGainEvent_class, tagGainEvent_cons, obj, jb)))
+	if (!(tagGainEv = (*env)->NewObject (env, tagGainEvent_class, tagGainEvent_cons, obj, jb, (int)proto)))
 		return -1;
+	(*env)->DeleteLocalRef (env, jb);
+
 	(*env)->CallVoidMethod (env, obj, fireTagGain_mid, tagGainEv);
 	(*env)->DeleteLocalRef (env, tagGainEv);
-	(*ph_vm)->DetachCurrentThread (ph_vm);
+
 	return 0;
 }
 
@@ -91,14 +94,44 @@ Java_com_phidgets_RFIDPhidget_getLastTag (JNIEnv *env, jobject obj)
 	CPhidgetRFIDHandle h = (CPhidgetRFIDHandle)(uintptr_t)
 	    (*env)->GetLongField( env, obj, handle_fid);
 	int error;
-	unsigned char buffer[11];
-	char stringbuffer[20];
+	char *tag;
 	jstring jb;
-	if ((error = CPhidgetRFID_getLastTag(h, (unsigned char *)&buffer)))
+	CPhidgetRFID_Protocol proto;
+	if ((error = CPhidgetRFID_getLastTag2(h, &tag, &proto)))
 		PH_THROW(error);
 
-	sprintf(stringbuffer, "%02x%02x%02x%02x%02x",buffer[0],buffer[1],buffer[2],buffer[3],buffer[4]);
-
-	jb=(*env)->NewStringUTF(env, stringbuffer);
+	jb=(*env)->NewStringUTF(env, tag);
 	return jb;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_phidgets_RFIDPhidget_getLastTagProtocol (JNIEnv *env, jobject obj)
+{
+	CPhidgetRFIDHandle h = (CPhidgetRFIDHandle)(uintptr_t)
+	    (*env)->GetLongField( env, obj, handle_fid);
+	int error;
+	char *tag;
+	CPhidgetRFID_Protocol proto;
+	if ((error = CPhidgetRFID_getLastTag2(h, &tag, &proto)))
+		PH_THROW(error);
+
+	return (jint)proto;
+}
+
+JNIEXPORT void JNICALL Java_com_phidgets_RFIDPhidget_write
+  (JNIEnv *env, jobject obj, jstring tag, jint proto, jboolean lock)
+{
+	int error;
+	
+    jboolean iscopy;
+    const char *tagString = (*env)->GetStringUTFChars(
+                env, tag, &iscopy);
+
+	CPhidgetRFIDHandle h = (CPhidgetRFIDHandle)(uintptr_t)
+	    (*env)->GetLongField(env, obj, handle_fid);
+
+	if ((error = CPhidgetRFID_write(h, (char *)tagString, (CPhidgetRFID_Protocol)proto, (int)lock)))
+		PH_THROW(error);
+
+	(*env)->ReleaseStringUTFChars(env, tag, tagString);
 }

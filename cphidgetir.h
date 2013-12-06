@@ -4,7 +4,7 @@
 
 /** \defgroup phidIR Phidget IR 
  * \ingroup phidgets
- * Calls specific to the Phidget IR. See the product manual for more specific API details, supported functionality, units, etc.
+ * These calls are specific to the Phidget IR object. See your device's User Guide for more specific API details, technical information, and revision details. The User Guide, along with other resources, can be found on the product page for your device.
  * @{
  */
 
@@ -76,7 +76,7 @@ PHIDGET21_API int CCONV CPhidgetIR_TransmitRepeat(CPhidgetIRHandle phid);
  * Transmits RAW data as a series of pulses and spaces.
  * @param phid An attached phidget ir handle.
  * @param data The data to send. The array must start and end with a pulse and each element is a positive time in us.
- * @param length The length of the data array. Maximum length is 1024, but streams should be kept much shorter, ie. < 100ms between gaps.
+ * @param length The length of the data array. Maximum length is 200, but streams should be kept much shorter, ie. < 100ms between gaps.
  * @param carrierFrequency The Carrier Frequency in Hz. leave as 0 for default.
  * @param dutyCycle The Duty Cycle (10-50). Leave as 0 for default.
  * @param gap The gap time in us. This guarantees a gap time (no transmitting) after the data is sent, but can be set to 0.
@@ -193,7 +193,7 @@ struct _CPhidgetIR {
 
 	int rawDataSendWSCounter, rawDataSendWSKeys[IR_RAW_DATA_WS_KEYS_MAX];
 
-	unsigned char outputPacket[8];
+	unsigned char outputPacket[MAX_OUT_PACKET_SIZE];
 	unsigned int outputPacketLen;
 } typedef CPhidgetIRInfo;
 #endif

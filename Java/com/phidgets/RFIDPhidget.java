@@ -23,6 +23,20 @@ public final class RFIDPhidget extends Phidget
 		super (create ());
 	}
 	private static native long create () throws PhidgetException;
+
+	/**
+	 * EM4100 (EM4102) 40-bit. This is used with {@link #getLastTagProtocol() getSgetLastTagProtocolcreenSize} and {@link #write(String, int, boolean) write}
+	 */
+	public static final int PHIDGET_RFID_PROTOCOL_EM4100 = 1;
+	/**
+	 * ISO11785 FDX-B encoding (Animal ID). This is used with {@link #getLastTagProtocol() getSgetLastTagProtocolcreenSize} and {@link #write(String, int, boolean) write}
+	 */
+	public static final int PHIDGET_RFID_PROTOCOL_ISO11785_FDX_B = 2;
+	/**
+	 * PhidgetsTAG Protocol 24 character ASCII. This is used with {@link #getLastTagProtocol() getSgetLastTagProtocolcreenSize} and {@link #write(String, int, boolean) write}
+	 */
+	public static final int PHIDGET_RFID_PROTOCOL_PHIDGETS = 3;
+
 	/**
 	 * Returns the number of outputs. These are the outputs provided by the terminal block.
 	 * Older RFID readers do not have these outputs, and this method will return 0.
@@ -87,6 +101,14 @@ public final class RFIDPhidget extends Phidget
 	 */
 	public native String getLastTag () throws PhidgetException;
 	/**
+	 * Returns the protocol of the last tag read. This method will only return a valid protocol after a tag has been seen.
+	 * This method can be used even after a tag has been removed from the reader
+	 * @return protocol
+	 * @throws PhidgetException If this Phidget is not opened and attached. 
+	 * See {@link com.phidgets.Phidget#open(int) open} for information on determining if a device is attached.
+	 */
+	public native int getLastTagProtocol () throws PhidgetException;
+	/**
 	 * Returns the state of whether or not a tag is being read by the reader.
 	 * True indicated that a tag is on (or near) the reader, false indicates that one is not.
 	 * @return tag read state
@@ -94,6 +116,15 @@ public final class RFIDPhidget extends Phidget
 	 * See {@link com.phidgets.Phidget#open(int) open} for information on determining if a device is attached.
 	 */
 	public native boolean getTagStatus () throws PhidgetException;
+	/**
+	 * Writes a tag.
+	 * @param tag tag string
+	 * @param protocol tag protocol
+	 * @param lock lock tag from futher writes
+	 * @throws PhidgetException If this Phidget is not opened and attached, if the string is too malformed, or the protocol is invalid. 
+	 * See {@link com.phidgets.Phidget#open(int) open} for information on determining if a device is attached.
+	 */
+	public native void write (String tag, int protocol, boolean lock) throws PhidgetException;
 
 	private final void enableDeviceSpecificEvents (boolean b)
 	{

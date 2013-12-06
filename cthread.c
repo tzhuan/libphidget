@@ -5,6 +5,10 @@
 #include "cusb.h"
 #include "cphidgetlist.h"
 
+#if defined(_MACOSX) && !defined(_IPHONE)
+#include "macusb.h"
+#endif
+
 CThread_func_return_t CentralThreadFunction(CThread_func_arg_t arg);
 
 static CThread CentralThread;
@@ -21,6 +25,17 @@ void macPeriodicTimerFunction(CFRunLoopTimerRef timer, void *Handle);
 void macFindActiveDevicesSource(void *nothing);
 CFRunLoopTimerRef timer = NULL;
 CFRunLoopSourceRef findActiveDevicesSource = NULL;
+#endif
+
+#ifdef _WINDOWS
+
+#if defined(_WINDOWS) && !defined(WINCE)
+extern void initializeThreadSecurityAttributes();
+#else
+#define initializeThreadSecurityAttributes()
+#endif
+extern PSECURITY_ATTRIBUTES pSA;
+
 #endif
 
 int
@@ -112,7 +127,7 @@ JoinCentralThread()
 }
 
 /*
- * registers a device to recieve events and be polled by the central
+ * registers a device to receive events and be polled by the central
  * thread This needs to start the central thread if it's not yet
  * running.
 */
@@ -192,14 +207,14 @@ CThread_func_return_t CentralThreadFunction(CThread_func_arg_t lpdwParam)
 {
 #ifdef _MACOSX
 	CentralThread.runLoop = CFRunLoopGetCurrent();
-	
-	//setup notifications of Phidget attach/detach
-	CPhidgetManager_setupNotifications(CentralThread.runLoop);
 
 	CFRunLoopAddTimer(CentralThread.runLoop, timer, kCFRunLoopDefaultMode);
 	CFRunLoopAddSource(CentralThread.runLoop, findActiveDevicesSource, kCFRunLoopDefaultMode);
 	
 	CentralThread.macInitDone = PTRUE;
+	
+	//setup notifications of Phidget attach/detach
+	CPhidgetManager_setupNotifications(CentralThread.runLoop);
 	
 	//start run loop - note that this blocks until JoinCentralThread() is called.
 	CFRunLoopRun();
@@ -224,6 +239,8 @@ CThread_func_return_t CentralThreadFunction(CThread_func_arg_t lpdwParam)
 	
 	LOG(PHIDGET_LOG_INFO,"Central Thread exiting");
 	
+	if(fptrJavaDetachCurrentThread)
+		fptrJavaDetachCurrentThread();
 	CentralThread.thread_status = FALSE;
 	return EPHIDGET_OK;
 }
@@ -342,6 +359,8 @@ exit_not_needed:
 
 	LOG(PHIDGET_LOG_INFO,"ReadThread exiting normally (Phidget detached)");
 exit:
+	if(fptrJavaDetachCurrentThread)
+		fptrJavaDetachCurrentThread();
 	phid->readThread.thread_status = FALSE;
 	return (CThread_func_return_t)(size_t)result;
 }
@@ -443,6 +462,8 @@ exit_not_needed:
 	LOG(PHIDGET_LOG_INFO,"WriteThread exiting normally (Phidget detached)");
 
 exit:
+	if(fptrJavaDetachCurrentThread)
+		fptrJavaDetachCurrentThread();
 	phid->writeStopFlag = FALSE;
 	phid->writeThread.thread_status = FALSE;
 	return (CThread_func_return_t)(size_t)result;
@@ -452,7 +473,8 @@ int
 CThread_create(CThread *cp, CThread_func_t fp, CThread_func_arg_t arg)
 {
 #ifdef _WINDOWS
-	cp->m_ThreadHandle = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)fp, arg, 0, &cp->m_ThreadIdentifier);
+	initializeThreadSecurityAttributes();
+	cp->m_ThreadHandle = CreateThread(pSA, 0, (LPTHREAD_START_ROUTINE)fp, arg, 0, &cp->m_ThreadIdentifier);
 	if(cp->m_ThreadHandle) return EPHIDGET_OK;
 	else return GetLastError();
 #else
@@ -508,6 +530,9 @@ CThread_join(CThread *cp)
 
 	while (GetExitCodeThread(cp->m_ThreadHandle, &ec) && ec == STILL_ACTIVE)
 		SLEEP(10);
+	CloseHandle(cp->m_ThreadHandle);
+	cp->m_ThreadHandle = NULL;
+
 #else
 	if (cp->thread_status == TRUE)
 		pthread_join(cp->m_ThreadHandle, 0);

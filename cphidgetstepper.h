@@ -4,7 +4,7 @@
 
 /** \defgroup phidstepper Phidget Stepper 
  * \ingroup phidgets
- * Calls specific to the Phidget Stepper. See the product manual for more specific API details, supported functionality, units, etc.
+ * These calls are specific to the Phidget Stepper object. See your device's User Guide for more specific API details, technical information, and revision details. The User Guide, along with other resources, can be found on the product page for your device.
  * @{
  */
 
@@ -283,7 +283,7 @@ struct _CPhidgetStepper{
 	double currentMax, currentMin;
 	int microSteps;
 
-	unsigned char outputPacket[8];
+	unsigned char outputPacket[MAX_OUT_PACKET_SIZE];
 	unsigned int outputPacketLen;
 } typedef CPhidgetStepperInfo;
 #endif

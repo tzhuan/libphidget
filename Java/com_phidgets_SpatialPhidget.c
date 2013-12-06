@@ -34,6 +34,7 @@ spatialData_handler(CPhidgetSpatialHandle h, void *arg, CPhidgetSpatial_SpatialE
 	JNIEnv *env;
 	jobject obj;
 	jobject spatialDataEv;
+	jobject spatialEventData;
 	jobjectArray jo;
 	int i, j;
 
@@ -56,11 +57,13 @@ spatialData_handler(CPhidgetSpatialHandle h, void *arg, CPhidgetSpatial_SpatialE
 		accel = (*env)->NewDoubleArray(env, h->phid.attr.spatial.numAccelAxes);
 		gyro = (*env)->NewDoubleArray(env, h->phid.attr.spatial.numGyroAxes);
 		mag = (*env)->NewDoubleArray(env, data[i]->magneticField[0]==PUNK_DBL?0:h->phid.attr.spatial.numCompassAxes);
+		
 		if (!accel || !gyro || !mag)
 		{
 			PH_THROW(EPHIDGET_UNEXPECTED);
 			return -1;
 		}
+		
 		if(h->phid.attr.spatial.numAccelAxes)
 		{
 			datas = (*env)->GetDoubleArrayElements(env, accel, 0);
@@ -98,19 +101,32 @@ spatialData_handler(CPhidgetSpatialHandle h, void *arg, CPhidgetSpatial_SpatialE
 			(*env)->ReleaseDoubleArrayElements(env, mag, datas, 0);
 		}
 
+		if(!(spatialEventData = (*env)->NewObject(env, spatialEventData_class, spatialEventData_cons, accel, gyro, mag, data[i]->timestamp.seconds, data[i]->timestamp.microseconds)))
+		{
+			PH_THROW(EPHIDGET_UNEXPECTED);
+			return -1;
+		}
+			
+		(*env)->DeleteLocalRef(env, accel);
+		(*env)->DeleteLocalRef(env, gyro);
+		(*env)->DeleteLocalRef(env, mag);
+
 		//create and add the SpatialEventData object to its array
-		(*env)->SetObjectArrayElement(env,jo,i,(*env)->NewObject(env, spatialEventData_class, spatialEventData_cons, accel, gyro, mag, data[i]->timestamp.seconds, data[i]->timestamp.microseconds));
+		(*env)->SetObjectArrayElement(env,jo,i,spatialEventData);
+		
+		(*env)->DeleteLocalRef(env, spatialEventData);
 	}
 
 	if (!(spatialDataEv = (*env)->NewObject(env, spatialDataEvent_class, spatialDataEvent_cons, obj, jo)))
 	{
+		PH_THROW(EPHIDGET_UNEXPECTED);
 		return -1;
 	}
+	(*env)->DeleteLocalRef(env, jo);
 
 	(*env)->CallVoidMethod(env, obj, fireSpatialData_mid, spatialDataEv);
 
 	(*env)->DeleteLocalRef(env, spatialDataEv);
-	(*ph_vm)->DetachCurrentThread(ph_vm);
 
 	return 0;
 }
@@ -151,7 +167,8 @@ JNIEXPORT void JNICALL Java_com_phidgets_SpatialPhidget_setCompassCorrectionPara
 	jdouble gain0, jdouble gain1, jdouble gain2, 
 	jdouble T0, jdouble T1, jdouble T2, jdouble T3, jdouble T4, jdouble T5)
 {
-	CPhidgetSpatialHandle h = (CPhidgetSpatialHandle)(uintptr_t)(*env)->GetLongField( env, obj, handle_fid);
+	CPhidgetSpatialHandle h = (CPhidgetSpatialHandle)(uintptr_t)
+	    (*env)->GetLongField(env, obj, handle_fid);
 	int error;
 	if ((error = CPhidgetSpatial_setCompassCorrectionParameters(h, magField, offset0, offset1, offset2, gain0, gain1, gain2, T0, T1, T2, T3, T4, T5)))
 		PH_THROW(error);

@@ -57,15 +57,9 @@ serverConnect_handler(CPhidgetDictionaryHandle h, void *arg)
 	JNIEnv *env;
 	jobject obj;
 	jobject serverConnectEvent;
-	jint result;
 
-	result = (*ph_vm)->GetEnv(ph_vm, (void **)&env, JNI_VERSION_1_4);
-	
-	if(result == JNI_EDETACHED)
-	{
-		if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
-			JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
-	}
+	if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
+		JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
 
 	obj = (jobject)arg;
 
@@ -74,7 +68,6 @@ serverConnect_handler(CPhidgetDictionaryHandle h, void *arg)
 		return -1;
 	(*env)->CallVoidMethod(env, obj, fireServerConnect_mid, serverConnectEvent);
 	(*env)->DeleteLocalRef(env, serverConnectEvent);
-	(*ph_vm)->DetachCurrentThread(ph_vm);
 
 	return 0;
 }
@@ -97,15 +90,9 @@ serverDisconnect_handler(CPhidgetDictionaryHandle h, void *arg)
 	JNIEnv *env;
 	jobject obj;
 	jobject serverDisconnectEvent;
-	jint result;
 
-	result = (*ph_vm)->GetEnv(ph_vm, (void **)&env, JNI_VERSION_1_4);
-	
-	if(result == JNI_EDETACHED)
-	{
-		if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
-			JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
-	}
+	if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
+		JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
 
 	obj = (jobject)arg;
 
@@ -114,7 +101,6 @@ serverDisconnect_handler(CPhidgetDictionaryHandle h, void *arg)
 		return -1;
 	(*env)->CallVoidMethod(env, obj, fireServerDisconnect_mid, serverDisconnectEvent);
 	(*env)->DeleteLocalRef(env, serverDisconnectEvent);
-	(*ph_vm)->DetachCurrentThread(ph_vm);
 
 	return 0;
 }
@@ -300,11 +286,10 @@ Java_com_phidgets_Dictionary_nativeGetKey(JNIEnv *env, jobject obj, jstring key)
 {
 	int error;
 
-	char val[1024]; //TODO: unimpose this limit
+	char val[1024];
 	
     jboolean iscopy;
-    const char *keyString = (*env)->GetStringUTFChars(
-                env, key, &iscopy);
+    const char *keyString = (*env)->GetStringUTFChars(env, key, &iscopy);
 
 	CPhidgetDictionaryHandle h = (CPhidgetDictionaryHandle)(uintptr_t)
 	    (*env)->GetLongField(env, obj, dictionary_handle_fid);
@@ -313,7 +298,7 @@ Java_com_phidgets_Dictionary_nativeGetKey(JNIEnv *env, jobject obj, jstring key)
 	{
 		PH_THROW(error);
 		(*env)->ReleaseStringUTFChars(env, key, keyString);
-		return (*env)->NewStringUTF(env, "");
+		return NULL;
 	}
 	else
 	{

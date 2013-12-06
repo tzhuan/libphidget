@@ -4,7 +4,7 @@
 
 /** \defgroup phidanalog Phidget Analog 
  * \ingroup phidgets
- * Calls specific to the Phidget Analog. See the product manual for more specific API details, supported functionality, units, etc.
+ * These calls are specific to the Phidget Analog object. See your device's User Guide for more specific API details, technical information, and revision details. The User Guide, along with other resources, can be found on the product page for your device.
  * @{
  */
 

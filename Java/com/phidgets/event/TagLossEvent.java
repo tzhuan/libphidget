@@ -15,6 +15,7 @@ public class TagLossEvent
 {
 	Phidget source;
 	String value;
+	int protocol;
 
 	/**
 	 * Class constructor. This is called internally by the phidget library when creating this event.
@@ -25,6 +26,12 @@ public class TagLossEvent
 	{
 		this.source = source;
 		this.value = value;
+	}
+	public TagLossEvent(Phidget source, String value, int protocol)
+	{
+		this.source = source;
+		this.value = value;
+		this.protocol = protocol;
 	}
 
 	/**
@@ -39,12 +46,21 @@ public class TagLossEvent
 	}
 
 	/**
-	 * Returns the Tag that was lost. This is a 10 digit hex number as a string.
+	 * Returns the Tag that was lost.
 	 * 
 	 * @return the lost tag
 	 */
 	public String getValue() {
 		return value;
+	}
+
+	/**
+	 * Returns the protocol of the Tag that was lost.
+	 * 
+	 * @return the lost tag protocol
+	 */
+	public int getProtocol() {
+		return protocol;
 	}
 
 	/**

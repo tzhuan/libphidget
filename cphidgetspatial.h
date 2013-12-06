@@ -4,7 +4,7 @@
 
 /** \defgroup phidspatial Phidget Spatial 
  * \ingroup phidgets
- * Calls specific to the Phidget Spatial. See the product manual for more specific API details, supported functionality, units, etc.
+ * These calls are specific to the Phidget Spatial object. See your device's User Guide for more specific API details, technical information, and revision details. The User Guide, along with other resources, can be found on the product page for your device.
  * @{
  */
 
@@ -172,6 +172,32 @@ PHIDGET21_API int CCONV CPhidgetSpatial_resetCompassCorrectionParameters(CPhidge
  */
 CHDREVENT(Spatial,SpatialData,CPhidgetSpatial_SpatialEventDataHandle *data, int dataCount)
 
+//These are for a prototype device - hide until it's released
+#if !defined(EXTERNALPROTO) || defined(DEBUG)
+
+#define SPATIAL_ANALOG_AND_DIGITAL	0x00
+#define SPATIAL_ANALOG				0x01
+#define SPATIAL_DIGITAL				0x02
+
+typedef enum {
+	PHIDGET_SPATIAL_ANALOG_AND_DIGITAL = 0,	/**< Analog failover to digital */
+	PHIDGET_SPATIAL_ANALOG,					/**< Analog only */
+	PHIDGET_SPATIAL_DIGITAL,				/**< Digital only */
+}  CPhidgetSpatial_AnalogDigitalMode;
+
+CHDRSET(Spatial, AnalogDigitalMode, CPhidgetSpatial_AnalogDigitalMode mode)
+PHIDGET21_API int CCONV CPhidgetSpatial_unZeroGyro(CPhidgetSpatialHandle phid);
+PHIDGET21_API int CCONV CPhidgetSpatial_setDigitalGyroCalibrationValues(CPhidgetSpatialHandle phid,
+	double gainPositive[3], double gainNegative[3], double offset[3], double factor1[3], double factor2[3]);
+PHIDGET21_API int CCONV CPhidgetSpatial_setAnalogGyroCalibrationValues(CPhidgetSpatialHandle phid,
+	double gainPositive[3], double gainNegative[3], double offset[3], double factor1[3], double factor2[3]);
+PHIDGET21_API int CCONV CPhidgetSpatial_setDigitalAccelCalibrationValues(CPhidgetSpatialHandle phid,
+	double gainPositive[3], double gainNegative[3], double offset[3], double factor1[3], double factor2[3]);
+PHIDGET21_API int CCONV CPhidgetSpatial_setAnalogAccelCalibrationValues(CPhidgetSpatialHandle phid,
+	double gainPositive[3], double gainNegative[3], double offset[3], double factor1[3], double factor2[3]);
+
+#endif
+
 #ifndef EXTERNALPROTO
 
 #define SPATIAL_MAX_ACCELAXES 3
@@ -183,16 +209,72 @@ CHDREVENT(Spatial,SpatialData,CPhidgetSpatial_SpatialEventDataHandle *data, int 
 //1 second is the longest between events that we support
 #define SPATIAL_MIN_DATA_RATE 1000
 //add 200ms for timing differences (late events, etc) - should be plenty
-#define SPATIAL_DATA_BUFFER_SIZE ((SPATIAL_MIN_DATA_RATE + 200)/SPATIAL_MAX_DATA_RATE)
-//1 second of data to zero the gyro - make sure DATA_BUFFER_SIZE is big enough to hold this much data
+#define SPATIAL_DATA_BUFFER_SIZE ((SPATIAL_MIN_DATA_RATE * 2 + 200)/SPATIAL_MAX_DATA_RATE)
+//2 seconds of data to zero the gyro - make sure DATA_BUFFER_SIZE is big enough to hold this much data
 #define SPATIAL_ZERO_GYRO_TIME 2000
 
 //packet types
 //IN
-#define SPATIAL_PACKET_DATA	0x00
-#define SPATIAL_PACKET_CALIB 0x80
+#define SPATIAL_PACKET_DATA		0x00
+#define SPATIAL_PACKET_CALIB	0x80
 //OUT
-#define SPATIAL_READCALIB 0x01
+#define SPATIAL_READCALIB			0x01
+#define SPATIAL_SET_POLLING_TYPE	0x02
+#define SPATIAL_ZERO_GYRO			0x03
+#define SPATIAL_UNZERO_GYRO			0x04
+
+//M3 Spatial calibration table indexes
+#define SPATIAL_DIGITAL_ACCEL_CALIB_TABLE_INDEX		0
+#define SPATIAL_ANALOG_ACCEL_CALIB_TABLE_INDEX		1
+#define SPATIAL_DIGITAL_GYRO_CALIB_TABLE_INDEX		2
+#define SPATIAL_ANALOG_GYRO_CALIB_TABLE_INDEX		3
+#define SPATIAL_COMPASS_CALIB_TABLE_INDEX			4
+#define SPATIAL_COMPASS_TEMP_CALIB_TABLE_INDEX		5
+
+#define SPATIAL_ACCEL_GYRO_CALIB_TABLE_LENGTH		64
+#define SPATIAL_COMPASS_CALIB_TABLE_LENGTH			56
+
+#define SPATIAL_GyroCalibTable_ID 		1000
+#define SPATIAL_AccelCalibTable_ID 		1001
+
+/**
+ * M3 Spatial constants (1041, 1042, 1043, 1044)
+ *  -Values are transmitted as signed integers with a unit of 'bits'
+ *  -Values are calibrated in-firmware
+ *  -Values are centered at zero
+ *
+ * Precision Voltage Ref is 3.3 V
+ * AD7689 ADC is 16-bit
+ *
+ * LPR410AL x,y Analog Gyro is 2.5 mV/dps and +-400 dps
+ * LY330ALH z-axis Analog Gyro is 3.752 mV/dps and +-300 dps
+ * L3GD20 Digital Gyro is 70 mdps/bit and +-2000 dps
+ *
+ * KXR94-2050 Analog Accelerometer is 660 mV/g and +-2g
+ * MMA8451Q Digital Accelerometer is 1024 bits/g and +-8g
+ *
+ * HMC5883L Digital Compass is 3.03 mG/bit and +-5.6 Gauss
+ **/
+#define SPATIAL_VOLTAGE_REF 3.3
+#define SPATIAL_AD7689_BITS_PER_VOLT (0x10000 / SPATIAL_VOLTAGE_REF)
+
+#define SPATIAL_LPR410AL_VOLTS_PER_DPS 0.0025
+#define SPATIAL_LRP410AL_w_AD7689_BITS_PER_DPS (SPATIAL_LPR410AL_VOLTS_PER_DPS * SPATIAL_AD7689_BITS_PER_VOLT)
+
+#define SPATIAL_LY330ALH_VOLTS_PER_DPS 0.003752
+#define SPATIAL_LY330ALH_w_AD7689_BITS_PER_DPS (SPATIAL_LY330ALH_VOLTS_PER_DPS * SPATIAL_AD7689_BITS_PER_VOLT)
+
+#define SPATIAL_L3GD20_DPS_PER_BIT 0.07
+#define SPATIAL_L3GD20_BITS_PER_DPS (1 / SPATIAL_L3GD20_DPS_PER_BIT)
+
+#define SPATIAL_KXR94_2050_VOLTS_PER_G 0.660
+#define SPATIAL_KXR94_2050_w_AD7689_BITS_PER_G (SPATIAL_KXR94_2050_VOLTS_PER_G * SPATIAL_AD7689_BITS_PER_VOLT)
+
+#define SPATIAL_MMA8451Q_BITS_PER_G 1024
+
+#define SPATIAL_HMC5883L_GAUSS_PER_BIT 0.00303
+#define SPATIAL_HMC5883L_BITS_PER_GAUSS (1 / SPATIAL_HMC5883L_GAUSS_PER_BIT)
+
 
 struct _CPhidgetSpatial {
 	CPhidget phid;
