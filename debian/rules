@@ -5,3 +5,5 @@ export DH_OPTIONS=-v
 
 %:
 	dh $@
+
+override_dh_auto_clean:

@@ -1,7 +1,7 @@
 Source: libphidget
 Priority: optional
 Maintainer: Tz-Huan Huang <tzhuan@gmail.com>
-Build-Depends: debhelper (>= 8), autotools-dev, libusb-dev, libavahi-core-dev
+Build-Depends: debhelper (>= 9), autotools-dev, libusb-dev, libavahi-core-dev
 Standards-Version: 3.9.4
 Section: libs
 Homepage: http://www.phidgets.com
