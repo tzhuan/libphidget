@@ -1,0 +1,21 @@
+Source: libphidget
+Priority: optional
+Maintainer: Tz-Huan Huang <tzhuan@gmail.com>
+Build-Depends: debhelper (>= 8), autotools-dev, libusb-dev, libavahi-core-dev
+Standards-Version: 3.9.4
+Section: libs
+Homepage: http://www.phidgets.com
+
+Package: libphidget21-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: libphidget21 (= ${binary:Version}), ${misc:Depends}
+Description: Development support file for Phidgets libraries
+
+Package: libphidget21
+Section: libs
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Phidgets libraries
