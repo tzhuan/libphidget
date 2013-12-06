@@ -1,3 +1,9 @@
+libphidget (2.1.8.20130723-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Tz-Huan Huang <tzhuan@gmail.com>  Fri, 06 Dec 2013 15:37:17 +0800
+
 libphidget (2.1.8.20120216-1) unstable; urgency=low
 
   * Initial release.
