@@ -9,11 +9,18 @@
 
 #include "stdafx.h"
 #include "cusb.h"
+#include <usb.h>
+
+int CUSBGetDeviceCapabilities(CPhidgetHandle phid, struct usb_device *dev, struct usb_dev_handle *udev);
+
+void CUSBUninit()
+{}
 
 int CUSBCloseHandle(CPhidgetHandle phid) {
 	int ret = 0;
 	int result = EPHIDGET_OK;
 	
+
 	if (!phid)
 		return EPHIDGET_INVALIDARG;
 
@@ -124,53 +131,60 @@ int CUSBSendPacket(CPhidgetHandle phid, unsigned char *buffer) {
 }
 
 int CUSBSetLabel(CPhidgetHandle phid, char *buffer) {
-	int BytesWritten = 0;
-	int size = buffer[0];
-	
-	if(size>22) return EPHIDGET_INVALID;
-	
-	if (!phid)
-		return EPHIDGET_INVALIDARG;
-		
-	if (!CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHED_FLAG)
-		&& !CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHING_FLAG))
-		return EPHIDGET_NOTATTACHED;
-		
-	if (phid->deviceHandle == NULL)
+	if(deviceSupportsGeneralUSBProtocol(phid))
 	{
-		LOG(PHIDGET_LOG_WARNING,"Handle for writing is not valid");
-		return EPHIDGET_UNEXPECTED;
+		return CPhidgetGPP_setLabel(phid, buffer);
 	}
-		
-	BytesWritten = usb_control_msg(phid->deviceHandle, 
-					USB_ENDPOINT_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
-					USB_REQ_SET_DESCRIPTOR,
-					0x0304, /* value */
-					0x0409, /* index*/
-					(char *)buffer, 
-					size, /* size */
-					500); /* FIXME? timeout */
-					
-	if(BytesWritten < 0)
+	else
 	{
-		switch(BytesWritten)
+		int BytesWritten = 0;
+		int size = buffer[0];
+		
+		if(size>22) return EPHIDGET_INVALID;
+		
+		if (!phid)
+			return EPHIDGET_INVALIDARG;
+			
+		if (!CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHED_FLAG)
+			&& !CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHING_FLAG))
+			return EPHIDGET_NOTATTACHED;
+			
+		if (phid->deviceHandle == NULL)
 		{
-		case -ETIMEDOUT: //important case?	
-		default:
-			LOG(PHIDGET_LOG_INFO, "usb_control_msg failed with error code: %d \"%s\"", BytesWritten, strerror(-BytesWritten));
-			return EPHIDGET_UNSUPPORTED;
+			LOG(PHIDGET_LOG_WARNING,"Handle for writing is not valid");
+			return EPHIDGET_UNEXPECTED;
 		}
-	}
+			
+		BytesWritten = usb_control_msg(phid->deviceHandle, 
+						USB_ENDPOINT_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
+						USB_REQ_SET_DESCRIPTOR,
+						0x0304, /* value */
+						0x0409, /* index*/
+						(char *)buffer, 
+						size, /* size */
+						500); /* FIXME? timeout */
+						
+		if(BytesWritten < 0)
+		{
+			switch(BytesWritten)
+			{
+			case -ETIMEDOUT: //important case?	
+			default:
+				LOG(PHIDGET_LOG_INFO, "usb_control_msg failed with error code: %d \"%s\"", BytesWritten, strerror(-BytesWritten));
+				return EPHIDGET_UNSUPPORTED;
+			}
+		}
 
-	if (BytesWritten != size)
-	{
-		LOG(PHIDGET_LOG_WARNING,"Failure in CUSBSetLabel - Report Length"
-			": %d, bytes written: %d",
-		    size, (int)BytesWritten);
-		return EPHIDGET_UNEXPECTED;
+		if (BytesWritten != size)
+		{
+			LOG(PHIDGET_LOG_WARNING,"Failure in CUSBSetLabel - Report Length"
+				": %d, bytes written: %d",
+				size, (int)BytesWritten);
+			return EPHIDGET_UNEXPECTED;
+		}
+		
+		return EPHIDGET_OK;
 	}
-	
-	return EPHIDGET_OK;
 }
 
 /* Buffer should be at least 8 bytes long */
@@ -252,24 +266,32 @@ static int getLabelString(CPhidgetHandle phid, struct usb_dev_handle *udev)
 {	
 	int len = 0;
 	char labelBuf[22];
+	struct usb_device *dev;
 	memset(labelBuf, 0, sizeof(labelBuf));
 	
-	//Note that this returns the whole descriptor, including the length and type bytes
-	len = usb_get_string(udev, 4, 0, (char *)labelBuf, 22);
+	dev = usb_device(udev);
 	
-	if(len < 0)
+	if(dev->descriptor.iSerialNumber == 3)
 	{
-		switch(len)
+		//Note that this returns the whole descriptor, including the length and type bytes
+		len = usb_get_string(udev, 4, 0, (char *)labelBuf, 22);
+		
+		if(len < 0)
 		{
-			case -ETIMEDOUT: //important case?
-			default:
-				LOG(PHIDGET_LOG_INFO, "usb_get_string_simple failed in CUSBGetDeviceCapabilities with error code: %d \"%s\" while reading label - this probably just means the device doesn't support labels, so this is fine.", len, strerror(-len));
+			switch(len)
+			{
+				case -ETIMEDOUT: //important case?
+				default:
+					LOG(PHIDGET_LOG_INFO, "usb_get_string_simple failed in CUSBGetDeviceCapabilities with error code: %d \"%s\" while reading label - this probably just means the device doesn't support labels, so this is fine.", len, strerror(-len));
+			}
+			phid->label[0]='\0';
+			return EPHIDGET_OK;
 		}
-		phid->label[0]='\0';
-		return EPHIDGET_OK;
+		else
+			return decodeLabelString(labelBuf, phid->label, phid->serialNumber);
 	}
-	else
-		return decodeLabelString(labelBuf, phid->label, phid->serialNumber);
+	phid->label[0]='\0';
+	return EPHIDGET_OK;
 }
 
 int CUSBRefreshLabelString(CPhidgetHandle phid)
@@ -472,6 +494,7 @@ int CUSBBuildList(CPhidgetList **curList) {
 
 						CPhidget_setStatusFlag(&phid->status, PHIDGET_ATTACHED_FLAG, &phid->lock);
 						phid->deviceIDSpec = Phid_Device_Def[i].pdd_sdid;
+						phid->deviceUID = CPhidget_getUID(phid->deviceIDSpec, phid->deviceVersion);
 						phid->deviceDef = &Phid_Device_Def[i];
 						phid->deviceID = Phid_Device_Def[i].pdd_did;
 						phid->ProductID = dev->descriptor.idProduct;
@@ -495,6 +518,19 @@ int CUSBBuildList(CPhidgetList **curList) {
 							{
 								phid->serialNumber = atol(string);
 								getLabelString(phid, udev);
+							}
+						}
+						if (dev->descriptor.iProduct) {
+							if((ret = usb_get_string_simple(udev, dev->descriptor.iProduct, phid->usbProduct, sizeof(phid->usbProduct))) < 0)
+							{
+								LOG(PHIDGET_LOG_ERROR, "usb_get_string_simple failed with error code: %d \"%s\"", ret, strerror(-ret));
+								LOG(PHIDGET_LOG_INFO, "This usually means you need to run as root");
+								if((ret = usb_close(udev)) < 0)
+								{
+									LOG(PHIDGET_LOG_ERROR, "usb_close failed with error code: %d \"%s\"", ret, strerror(-ret));
+								}
+								free(phid);
+								goto next;
 							}
 						}
 						phid->specificDevice = TRUE;
@@ -585,6 +621,19 @@ int CUSBOpenHandle(CPhidgetHandle phid)
 									serial = atol(string);
 								}
 							}
+							if (dev->descriptor.iProduct) {
+								if((ret = usb_get_string_simple(udev, dev->descriptor.iProduct, phid->usbProduct, sizeof(phid->usbProduct))) < 0)
+								{
+									LOG(PHIDGET_LOG_ERROR, "usb_get_string_simple failed with error code: %d \"%s\"", ret, strerror(-ret));
+									LOG(PHIDGET_LOG_INFO, "This usually means you need to run as root");
+									if((ret = usb_close(udev)) < 0)
+									{
+										LOG(PHIDGET_LOG_ERROR, "usb_close failed with error code: %d \"%s\"", ret, strerror(-ret));
+									}
+									free(phid);
+									goto next;
+								}
+							}
 							if (serial == phid->serialNumber) {
 								/*	On Linux, the HID driver likes to claim Phidgets - we can disconnect it here.
 									Maybe the user has installed the kernel drivers for the interface kit or servo - disconnect them too (does this work)
@@ -634,7 +683,9 @@ int CUSBOpenHandle(CPhidgetHandle phid)
 									if (dev->descriptor.bcdDevice < 0x100)
 										phid->deviceVersion = dev->descriptor.bcdDevice * 100;
 									else
-										phid->deviceVersion = ((dev->descriptor.bcdDevice >> 8) * 100) + ((dev->descriptor.bcdDevice & 0xff));			
+										phid->deviceVersion = ((dev->descriptor.bcdDevice >> 8) * 100) + ((dev->descriptor.bcdDevice & 0xff));
+										
+									phid->deviceUID = CPhidget_getUID(phid->deviceIDSpec, phid->deviceVersion);
 									phid->serialNumber = serial;
 			
 									if((ret = CUSBGetDeviceCapabilities(phid, dev, udev)))

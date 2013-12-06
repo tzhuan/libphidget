@@ -26,12 +26,6 @@ CPHIDGETINIT(Generic)
 	phid->out = phid->phid.outputReportByteLength;
 	phid->in = phid->phid.inputReportByteLength;
 
-	
-#ifdef _WINDOWS
-	phid->out--;
-	phid->in--;
-#endif
-
 	return EPHIDGET_OK;
 }
 
@@ -40,10 +34,6 @@ CPHIDGETDATA(Generic)
 	if (length<0) return EPHIDGET_INVALIDARG;
 	TESTPTR(phid);
 	TESTPTR(buffer);
-
-#ifdef _WINDOWS
-	length--;
-#endif
 
 	FIRE(Packet, buffer, length);
 	memcpy(phid->lastPacket, buffer, length);

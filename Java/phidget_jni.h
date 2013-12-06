@@ -108,7 +108,9 @@ void com_phidgets_##Pname##Phidget_OnLoad(JNIEnv *env) \
 		JNI_ABORT_STDERR("Couldn't get NewStringUTF"); \
 	if (!(eobj = (*env)->NewObject(env, ph_exception_class, ph_exception_cons, errno, edesc))) \
 		JNI_ABORT_STDERR("Couldn't get NewObject ph_exception_class"); \
+	(*env)->DeleteLocalRef (env, edesc); \
 	(*env)->Throw(env, (jthrowable)eobj); \
+	/*(*env)->ExceptionClear(env);*/ \
 }
 
 #define JNI_INDEXED_SETFUNC(pname, fname, lfname, type) \
@@ -218,7 +220,6 @@ static int CCONV event##_handler(CPhidget##pname##Handle h, void *arg, type v) \
 		return -1; \
 	(*env)->CallVoidMethod(env, obj, fire##Event##_mid, event##Ev); \
 	(*env)->DeleteLocalRef(env, event##Ev); \
-	(*ph_vm)->DetachCurrentThread(ph_vm); \
 \
 	return 0; \
 }
@@ -249,7 +250,6 @@ static int CCONV event##_handler(CPhidget##pname##Handle h, void *arg, int index
 		return -1; \
 	(*env)->CallVoidMethod(env, obj, fire##Event##_mid, event##Ev); \
 	(*env)->DeleteLocalRef(env, event##Ev); \
-	(*ph_vm)->DetachCurrentThread(ph_vm); \
 \
 	return 0; \
 }
@@ -281,7 +281,6 @@ static int CCONV event##_handler(CPhidget##pname##Handle h, void *arg, int index
 		return -1; \
 	(*env)->CallVoidMethod(env, obj, fire##Event##_mid, event##Ev); \
 	(*env)->DeleteLocalRef(env, event##Ev); \
-	(*ph_vm)->DetachCurrentThread(ph_vm); \
 \
 	return 0; \
 }
@@ -313,7 +312,6 @@ static int CCONV event##_handler(CPhidget##pname##Handle h, void *arg, type v, t
 		return -1; \
 	(*env)->CallVoidMethod(env, obj, fire##Event##_mid, event##Ev); \
 	(*env)->DeleteLocalRef(env, event##Ev); \
-	(*ph_vm)->DetachCurrentThread(ph_vm); \
 \
 	return 0; \
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2006 Phidgets Inc.  All rights reserved.
+ * Copyright 2012 Phidgets Inc.  All rights reserved.
  */
 
 package com.phidgets;
@@ -14,10 +14,12 @@ import com.phidgets.event.*;
  * to read and write data to and from an Interface Kit are implemented in this class.
  * <p>
  * There are many types of Interface Kits, but each is simply a collection of 0 or more 
- * digital inputs, digital outpus and analog sensors. Inputs can be read and outputs can be set,
+ * digital inputs, digital outpus and analog sensor inputs. The inputs can be read and outputs can be set,
  * and event handlers can be set for each of these.
  * <p>
- * See your hardware documentation for more information on the I/O specific to your Phidget.
+ * See your device's User Guide for more specific API details, 
+ * technical information, and revision details. The User Guide, along with other resources, can be found on 
+ * the product page for your device.
  * 
  * @author Phidgets Inc.
  */

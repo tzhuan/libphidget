@@ -4,7 +4,7 @@
 
 /** \defgroup phidtextled Phidget TextLED 
  * \ingroup phidgets
- * Calls specific to the Phidget Text LED. See the product manual for more specific API details, supported functionality, units, etc.
+ * These calls are specific to the Phidget Text LED object. See your device's User Guide for more specific API details, technical information, and revision details. The User Guide, along with other resources, can be found on the product page for your device.
  * @{
  */
 
@@ -63,7 +63,7 @@ struct _CPhidgetTextLED {
 	char *displayStringPtr[TEXTLED_MAXROWS];
 	int brightness;
 
-	unsigned char outputPacket[24];
+	unsigned char outputPacket[MAX_OUT_PACKET_SIZE];
 	unsigned int outputPacketLen;
 
 	char *strings[TEXTLED_MAXROWS];

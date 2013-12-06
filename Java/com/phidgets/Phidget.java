@@ -1,5 +1,5 @@
 /*
- * Copyright 2006 Phidgets Inc.  All rights reserved.
+ * Copyright 2012 Phidgets Inc.  All rights reserved.
  */
 package com.phidgets;
 
@@ -204,8 +204,8 @@ public class Phidget
 	/* These are all current devices */
 	public static final int PHIDID_ACCELEROMETER_3AXIS				= 0x07E;
 	public static final int PHIDID_ADVANCEDSERVO_1MOTOR				= 0x082;
-	public static final int PHIDID_ANALOG_4OUTPUT					= 0x037;
 	public static final int PHIDID_ADVANCEDSERVO_8MOTOR				= 0x03A;
+	public static final int PHIDID_ANALOG_4OUTPUT					= 0x037;
 	public static final int PHIDID_BIPOLAR_STEPPER_1MOTOR			= 0x07B;
 	public static final int PHIDID_BRIDGE_4INPUT	                = 0x03B;
 	public static final int PHIDID_ENCODER_1ENCODER_1INPUT			= 0x04B;
@@ -216,23 +216,22 @@ public class Phidget
 	public static final int PHIDID_INTERFACEKIT_0_0_4				= 0x040;
 	public static final int PHIDID_INTERFACEKIT_0_0_8				= 0x081;
 	public static final int PHIDID_INTERFACEKIT_0_16_16				= 0x044;
+	public static final int PHIDID_INTERFACEKIT_2_2_2				= 0x036;
 	public static final int PHIDID_INTERFACEKIT_8_8_8				= 0x045;
 	public static final int PHIDID_INTERFACEKIT_8_8_8_w_LCD			= 0x07D;
 	public static final int PHIDID_IR								= 0x04D;
-	public static final int PHIDID_LED_64							= 0x04A;
 	public static final int PHIDID_LED_64_ADV						= 0x04C;
 	public static final int PHIDID_LINEAR_TOUCH						= 0x076;
+	public static final int PHIDID_MOTORCONTROL_1MOTOR				= 0x03E;
 	public static final int PHIDID_MOTORCONTROL_HC_2MOTOR			= 0x059;
-	public static final int PHIDID_MOTORCONTROL_LV_2MOTOR_4INPUT	= 0x058;
-	public static final int PHIDID_MOTORCONTROL_1MOTOR              = 0x03E;
-	public static final int PHIDID_PHSENSOR							= 0x074;
 	public static final int PHIDID_RFID_2OUTPUT						= 0x031;
+	public static final int PHIDID_RFID_2OUTPUT_READ_WRITE			= 0x034;
 	public static final int PHIDID_ROTARY_TOUCH						= 0x077;
-	public static final int PHIDID_SERVO_1MOTOR						= 0x039;
 	public static final int PHIDID_SPATIAL_ACCEL_3AXIS				= 0x07F;
 	public static final int PHIDID_SPATIAL_ACCEL_GYRO_COMPASS		= 0x033;
 	public static final int PHIDID_TEMPERATURESENSOR				= 0x070;
 	public static final int PHIDID_TEMPERATURESENSOR_4				= 0x032;
+	public static final int PHIDID_TEMPERATURESENSOR_IR				= 0x03C;
 	public static final int PHIDID_TEXTLCD_2x20_w_8_8_8				= 0x17D;
 	public static final int PHIDID_TEXTLCD_ADAPTER                  = 0x03D;
 	public static final int PHIDID_UNIPOLAR_STEPPER_4MOTOR			= 0x07A;
@@ -241,7 +240,11 @@ public class Phidget
 	public static final int PHIDID_ACCELEROMETER_2AXIS				= 0x071;
 	public static final int PHIDID_INTERFACEKIT_0_8_8_w_LCD			= 0x053;
 	public static final int PHIDID_INTERFACEKIT_4_8_8				= 4;
+	public static final int PHIDID_LED_64							= 0x04A;
+	public static final int PHIDID_MOTORCONTROL_LV_2MOTOR_4INPUT	= 0x058;
+	public static final int PHIDID_PHSENSOR							= 0x074;
 	public static final int PHIDID_RFID								= 0x030;
+	public static final int PHIDID_SERVO_1MOTOR						= 0x039;
 	public static final int PHIDID_SERVO_1MOTOR_OLD					= 2;
 	public static final int PHIDID_SERVO_4MOTOR						= 0x038;
 	public static final int PHIDID_SERVO_4MOTOR_OLD					= 3;
@@ -675,7 +678,7 @@ public class Phidget
 
 	/**
 	 * Closes this Phidget.
-	 * This will shut down all threads dealing with this Phidget and you won't recieve any more events.
+	 * This will shut down all threads dealing with this Phidget and you won't receive any more events.
 	 * 
 	 * @throws PhidgetException If this Phidget is not opened. 
 	 */

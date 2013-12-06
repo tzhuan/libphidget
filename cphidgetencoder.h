@@ -4,7 +4,7 @@
 
 /** \defgroup phidenc Phidget Encoder 
  * \ingroup phidgets
- * Calls specific to the Phidget Encoder. See the product manual for more specific API details, supported functionality, units, etc.
+ * These calls are specific to the Phidget Encoder object. See your device's User Guide for more specific API details, technical information, and revision details. The User Guide, along with other resources, can be found on the product page for your device.
  * @{
  */
 
@@ -52,13 +52,20 @@ CHDRGETINDEX(Encoder,Position,int *position)
  */
 CHDRSETINDEX(Encoder,Position,int position)
 /**
- * Sets an encoder change handler. This is called when an encoder position changes.
+ * Sets an encoder position change handler. This is called when an encoder position changes.
  * @param phid An attached phidget encoder handle
  * @param fptr Callback function pointer. Note that positionChange is a relative not absolute change and time is the time
  *	in ms since the last position change event.
  * @param userPtr A pointer for use by the user - this value is passed back into the callback function.
  */
 CHDREVENTINDEX(Encoder,PositionChange,int time,int positionChange)
+/**
+ * Sets an encoder index handler. This is called when there is a pulse on the index pin.
+ * @param phid An attached phidget encoder handle
+ * @param fptr Callback function pointer. This returns the encoder position at which the index pulse occured.
+ * @param userPtr A pointer for use by the user - this value is passed back into the callback function.
+ */
+CHDREVENTINDEX(Encoder,Index,int indexPosition)
 /**
  * Gets the position of the last index pulse, as referenced to \ref CPhidgetEncoder_getPosition.
  * This will return EPHIDGET_UNKNOWN if there hasn't been an index event, or if the encoder doesn't support index.
@@ -99,6 +106,8 @@ struct _CPhidgetEncoder {
 	void *fptrInputChangeptr;
 	int (CCONV *fptrPositionChange)        (CPhidgetEncoderHandle, void *, int, int, int); 
 	void *fptrPositionChangeptr;
+	int (CCONV *fptrIndex)        (CPhidgetEncoderHandle, void *, int, int); 
+	void *fptrIndexptr;
 
 	unsigned char inputState[ENCODER_MAXINPUTS];
 
@@ -110,7 +119,7 @@ struct _CPhidgetEncoder {
 
 	int indexPosition[ENCODER_MAXENCODERS];
 
-	unsigned char outputPacket[8];
+	unsigned char outputPacket[MAX_OUT_PACKET_SIZE];
 	unsigned int outputPacketLen;
 
 } typedef CPhidgetEncoderInfo;

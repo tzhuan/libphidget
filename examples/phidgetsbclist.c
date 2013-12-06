@@ -53,14 +53,14 @@ int display_device_info(CPhidgetSBCHandle sbc)
 
 int attach(CPhidgetSBCHandle sbc, void *userPtr)
 {
-	printf("===ATTACH===\n");
+	printf("\n===ATTACH===\n");
 	display_device_info(sbc);
 	return 0;
 }
 
 int detach(CPhidgetSBCHandle sbc, void *userPtr)
 {
-	printf("===DETACH===\n");
+	printf("\n===DETACH===\n");
 	display_device_info(sbc);
 	return 0;
 }

@@ -73,15 +73,9 @@ attach_handler(CPhidgetHandle h, void *arg)
 	JNIEnv *env;
 	jobject obj;
 	jobject attachEvent;
-	jint result;
 
-	result = (*ph_vm)->GetEnv(ph_vm, (void **)&env, JNI_VERSION_1_4);
-
-	if(result == JNI_EDETACHED)
-	{
-		if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
-			JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
-	}
+	if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
+		JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
 
 	obj = (jobject)arg;
 
@@ -90,7 +84,6 @@ attach_handler(CPhidgetHandle h, void *arg)
 		return -1;
 	(*env)->CallVoidMethod(env, obj, fireAttach_mid, attachEvent);
 	(*env)->DeleteLocalRef(env, attachEvent);
-	(*ph_vm)->DetachCurrentThread(ph_vm);
 
 	return 0;
 }
@@ -123,7 +116,6 @@ detach_handler(CPhidgetHandle h, void *arg)
 		return -1;
 	(*env)->CallVoidMethod(env, obj, fireDetach_mid, detachEvent);
 	(*env)->DeleteLocalRef(env, detachEvent);
-	(*ph_vm)->DetachCurrentThread(ph_vm);
 
 	return 0;
 }
@@ -162,9 +154,9 @@ error_handler(CPhidgetHandle h, void *arg, int l, const char *v)
 	if (!(errorEvent = (*env)->NewObject(env, errorEvent_class, errorEvent_cons, obj, eobj)))
 		return -1;
 
+	(*env)->DeleteLocalRef (env, edesc);
 	(*env)->CallVoidMethod(env, obj, fireError_mid, errorEvent);
 	(*env)->DeleteLocalRef(env, errorEvent);
-	(*ph_vm)->DetachCurrentThread(ph_vm);
 
 	return 0;
 }
@@ -187,15 +179,9 @@ serverConnect_handler(CPhidgetHandle h, void *arg)
 	JNIEnv *env;
 	jobject obj;
 	jobject serverConnectEvent;
-	jint result;
 
-	result = (*ph_vm)->GetEnv(ph_vm, (void **)&env, JNI_VERSION_1_4);
-
-	if(result == JNI_EDETACHED)
-	{
-		if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
-			JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
-	}
+	if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
+		JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
 
 	obj = (jobject)arg;
 
@@ -204,7 +190,6 @@ serverConnect_handler(CPhidgetHandle h, void *arg)
 		return -1;
 	(*env)->CallVoidMethod(env, obj, fireServerConnect_mid, serverConnectEvent);
 	(*env)->DeleteLocalRef(env, serverConnectEvent);
-	(*ph_vm)->DetachCurrentThread(ph_vm);
 
 	return 0;
 }
@@ -227,15 +212,9 @@ serverDisconnect_handler(CPhidgetHandle h, void *arg)
 	JNIEnv *env;
 	jobject obj;
 	jobject serverDisconnectEvent;
-	jint result;
 
-	result = (*ph_vm)->GetEnv(ph_vm, (void **)&env, JNI_VERSION_1_4);
-
-	if(result == JNI_EDETACHED)
-	{
-		if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
-			JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
-	}
+	if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
+		JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
 
 	obj = (jobject)arg;
 
@@ -244,7 +223,6 @@ serverDisconnect_handler(CPhidgetHandle h, void *arg)
 		return -1;
 	(*env)->CallVoidMethod(env, obj, fireServerDisconnect_mid, serverDisconnectEvent);
 	(*env)->DeleteLocalRef(env, serverDisconnectEvent);
-	(*ph_vm)->DetachCurrentThread(ph_vm);
 
 	return 0;
 }
@@ -548,11 +526,11 @@ Java_com_phidgets_Phidget_nativeEnableLogging(JNIEnv *env, jclass cls, jint leve
 {
 	int error;
 	jboolean iscopy;
-	const char *textString = file ? (*env)->GetStringUTFChars(
-		env, file, &iscopy) : NULL;
+	const char *textString = file ? (*env)->GetStringUTFChars(env, file, &iscopy) : NULL;
 	if ((error = CPhidget_enableLogging(level, (char *)textString)))
 		PH_THROW(error);
-	(*env)->ReleaseStringUTFChars(env, file, textString);
+	if(textString != NULL)
+		(*env)->ReleaseStringUTFChars(env, file, textString);
 }
 
 JNIEXPORT void JNICALL

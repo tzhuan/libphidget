@@ -176,6 +176,8 @@ int dns_callback_thread(void *ptr)
 		}
 		//result==0 means timeout, loop around again
 	}
+	if(fptrJavaDetachCurrentThread)
+		fptrJavaDetachCurrentThread();
 	return EPHIDGET_OK;
 }
 
@@ -229,6 +231,13 @@ void PhidFromTXT(CPhidgetHandle phid, uint16_t txtLen, const char *txtRecord)
 	ZEROMEM(phid->networkInfo->zeroconf_server_id, valLen+1);
 	memcpy(phid->networkInfo->zeroconf_server_id, valPtr, valLen);
 	
+	if(txtver >= 3)
+	{
+		//USB Product String
+		if(!(valPtr = TXTRecordGetValuePtrPtr(txtLen, txtRecord, "usbstr", &valLen))) return;
+		memcpy(phid->usbProduct, valPtr, valLen);
+	}
+
 	// things added in version 2 of the txt
 	if(txtver >= 2)
 	{
@@ -250,8 +259,9 @@ void PhidFromTXT(CPhidgetHandle phid, uint16_t txtLen, const char *txtRecord)
 		phid->deviceID = strtol(temp, NULL, 10);
 		phid->deviceType = Phid_DeviceName[phid->deviceID];
 	}
+
 	//Old version uses string searching, but some devices have the same name with different IDs
-	else
+	if(txtver == 1)
 	{
 		char *name = NULL;
 		char *type = NULL;
@@ -283,6 +293,8 @@ void PhidFromTXT(CPhidgetHandle phid, uint16_t txtLen, const char *txtRecord)
 		free(type);
 	}
 	
+	phid->deviceUID = CPhidget_getUID(phid->deviceIDSpec, phid->deviceVersion);
+
 	phid->networkInfo->mdns = PTRUE;
 	
 }
@@ -510,7 +522,18 @@ void DNSServiceBrowse_Phidget_CallBack(DNSServiceRef service,
 		{
 			//have to fill in phid manually from just the name
 			int i;
-			char *name_copy = strdup(name);
+			char *name_copy;
+
+			//Look to see if this is a 'firmware upgrade' device.
+			if(name[0] == '1')
+			{
+				char *realname = strchr(name, ' ');
+				if(!realname)
+					return;
+				name_copy = strdup(&realname[1]);
+			}
+			else
+				name_copy = strdup(name);
 			for(i=0;i<(int)strlen(name_copy);i++)
 				if(name_copy[i] == '(') break;
 			if(i<=1) return;
@@ -522,7 +545,6 @@ void DNSServiceBrowse_Phidget_CallBack(DNSServiceRef service,
 			for(i = 0;i<PHIDGET_DEVICE_COUNT;i++)
 				if(!strcmp(name_copy, Phid_Device_Def[i].pdd_name)) break;
 			phid->deviceDef = &Phid_Device_Def[i];
-			//phid->deviceIDSpec = Phid_Device_Def[i].pdd_sdid;
 			phid->deviceIDSpec = 0; //Needs to be 0 because the name can be ambiguous (ie 1018/1200) - we will still match on serial/device class, which is enough for uniqueness
 			phid->attr = Phid_Device_Def[i].pdd_attr;
 			phid->deviceID = Phid_Device_Def[i].pdd_did;

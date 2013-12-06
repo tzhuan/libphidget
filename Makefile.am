@@ -2,6 +2,9 @@
 
 AM_CFLAGS = -I$(top_srcdir) -I$(top_srcdir)/utils -I$(top_srcdir)/dict -I$(top_srcdir)/linux -I$(top_srcdir)/include -D_LINUX
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libphidget21.pc
+
 lib_LTLIBRARIES = libphidget21.la
 
 # Rules for unpdating the libtool version:
@@ -85,7 +88,6 @@ libphidget21_la_SOURCES = cphidget.c \
 	cthread.h \
 	phidget21.c \
 	phidget21int.h \
-	linux/cusblinux.c \
 	dict/pdict.c \
 	dict/pdict.h \
 	dict/pdictclient.c \
@@ -119,6 +121,7 @@ EXTRA_DIST = examples/ifkit.c \
 	hotplug/phidgets.usermap \
 	hotplug/phidgets \
 	version.sh \
+	libphidget21.pc.in \
 	Java/com/phidgets/DictionaryKeyListener.java \
 	Java/com/phidgets/TextLCDPhidget.java \
 	Java/com/phidgets/SpatialEventData.java \
@@ -231,6 +234,12 @@ libphidget21_la_SOURCES += utils/cvtutf.c
 libphidget21_la_SOURCES += utils/cvtutf.h
 AM_CFLAGS += -DUSE_INTERNAL_UNICONV
 endif
+
+if NEW_LIBUSB
+libphidget21_la_SOURCES += linux/cusblinux-1.0.c
+else
+libphidget21_la_SOURCES += linux/cusblinux.c
+endif
 	
 if ZEROCONF_AVAHI
 libphidget21_la_SOURCES += linux/zeroconf_avahi.c \
@@ -342,24 +351,32 @@ install-exec-hook:
 endif
 
 install-data-hook:
-	if [ -e phidget21.jar ]; then install --owner=root --mode=755 -d $(DESTDIR)/usr/share/java; install --owner=root --mode=644 phidget21.jar $(DESTDIR)/usr/share/java; fi
+	if [ -e phidget21.jar ]; then install --owner=root --mode=755 -d $(DESTDIR)/usr/java/packages/lib/ext; install --owner=root --mode=755 -d $(DESTDIR)/usr/share/java; install --owner=root --mode=644 phidget21.jar $(DESTDIR)/usr/share/java; install --owner=root --mode=644 phidget21.jar $(DESTDIR)/usr/java/packages/lib/ext; fi
 
+if DEBUG
+phidget21.h:
+	@echo "Making $@"
+	@cat cppheader > $@
+	@$(CC) -g -E -P $(PHIDGET21FLAGS) -DDEBUG -D_DEBUG -D_LINUX -DEXTERNALPROTO -DREMOVE_DEPRECATED phidget21int.h | sed -e "s/extern \"C\" //g" >> $@
+	@cat cphidgetconstants.h >> $@
+	@cat cppfooter >> $@
+else
 phidget21.h:
 	@echo "Making $@"
 	@cat cppheader > $@
 	@$(CC) -g -E -P $(PHIDGET21FLAGS) -D_LINUX -DEXTERNALPROTO -DREMOVE_DEPRECATED phidget21int.h | sed -e "s/extern \"C\" //g" >> $@
 	@cat cphidgetconstants.h >> $@
 	@cat cppfooter >> $@
-	
-phidget21matlab.h:
+endif
+
+phidget21matlab.h: phidget21matlab_unix.h
+
+phidget21matlab_unix.h:
 	@echo "Making $@"
-	@echo "/*" > $@
-	@echo " * Phidget21 Header for Matlab" >> $@
-	@echo " * -All pointers to structs have been changed to long, as Matlab seems" >> $@
-	@echo " *  to be unhappy with either the undefined stucts or the double pointers." >> $@
-	@echo " */" >> $@
-	@$(CC) -g -E -P -D_LINUX -DEXTERNALPROTO -DREMOVE_DEPRECATED phidget21int.h | sed -e "s/extern \"C\" //g" | sed -e "s/struct [a-zA-Z_]* \*/long /" >> $@
+	@cat matlabHeader >> $@
+	@$(CC) -g -E -P -D_LINUX -DEXTERNALPROTO -DREMOVE_DEPRECATED phidget21int.h | sed -e "s/extern \"C\" //g" | sed -e "s/struct [a-zA-Z_]* \*/int * /" >> $@
 	@cat cphidgetconstants.h >> $@
+	@cat matlabFooter >> $@
 
 phidget21.jar:
 	@echo "Making $@"
@@ -371,6 +388,6 @@ deb:
 	@cp debian/changelog.template debian/changelog
 	@sed -i s/"VERSION"/"$(PACKAGE_VERSION)"/ debian/changelog
 	@sed -i s/"DATE"/"$(shell date +"%a, %d %b %Y %T %z")"/ debian/changelog
-	@if [ -z "$(DPKG_ARCH)" ]; then dpkg-buildpackage -us -uc; else dpkg-buildpackage -us -uc -a$(DPKG_ARCH); fi
+	@if [ -z "$(DPKG_ARCH)" ]; then dpkg-buildpackage -I.svn -us -uc; else dpkg-buildpackage -I.svn -us -uc -a$(DPKG_ARCH); fi
 	
 jni: all

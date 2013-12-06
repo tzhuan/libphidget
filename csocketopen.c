@@ -52,8 +52,11 @@
 *
 *	1.0.9
 *		-support for openLabelRemote and openLabelRemoteIP
+*
+*	1.0.10
+*		-support for 1024, 1032
 */
-const char *ws_protocol_ver = "1.0.9";
+const char *ws_protocol_ver = "1.0.10";
 
 /*void DNSServiceResolve_CallBack(
 				DNSServiceRef						sdRef,
@@ -757,6 +760,8 @@ CThread_func_return_t async_authorization_handler_thread(CThread_func_arg_t lpdw
 		newServerInfo->server->auth_thread.thread_status = FALSE;
 
 		CThread_mutex_unlock(&serverLock);
+		if(fptrJavaDetachCurrentThread)
+			fptrJavaDetachCurrentThread();
 		return (CThread_func_return_t)0;
 	}
 	
@@ -781,6 +786,8 @@ CThread_func_return_t async_authorization_handler_thread(CThread_func_arg_t lpdw
 		CThread_mutex_unlock(&serverLock);
 		//CThread_mutex_unlock(&serverLockLock);
 		
+		if(fptrJavaDetachCurrentThread)
+			fptrJavaDetachCurrentThread();
 		return (CThread_func_return_t)0;
 	}
 	
@@ -873,6 +880,8 @@ CThread_func_return_t async_authorization_handler_thread(CThread_func_arg_t lpdw
 									   "Error setting up manager listeners from async_authorization_handler_thread");
 	}
 	CList_emptyList((CListHandle *)managerErrorEvents, PFALSE, NULL);
+	if(fptrJavaDetachCurrentThread)
+		fptrJavaDetachCurrentThread();
 	return (CThread_func_return_t)0;
 }
 
@@ -1010,6 +1019,8 @@ CThread_func_return_t async_authorization_error_handler_thread(CThread_func_arg_
 	free(data->error);
 	free(data);
 
+	if(fptrJavaDetachCurrentThread)
+		fptrJavaDetachCurrentThread();
 	return (CThread_func_return_t)0;
 }
 
@@ -1269,7 +1280,7 @@ start:
 			{
 				//if we've been waiting too long, then signal disconnect
 				double waitTime = timeSince(&server->lastHeartbeatTime);
-				//if we haven't recieved any heartbeats, set the timeout high (4*4 = 16 seconds)
+				//if we haven't received any heartbeats, set the timeout high (4*4 = 16 seconds)
 				//This is so that really slow connections will get through the auth stage
 				double avgPingTime = ((server->avgHeartbeatTimeCount > 0) ? (server->avgHeartbeatTime / server->avgHeartbeatTimeCount) : 4.0);
 
@@ -1619,6 +1630,8 @@ CThread_func_return_t CentralRemoteThreadFunction(CThread_func_arg_t lpdwParam)
 		MonitorHeartbeats(); //sends out new heartbeats, detects when a server has gone down
 		SLEEP(250);
 	}
+	if(fptrJavaDetachCurrentThread)
+		fptrJavaDetachCurrentThread();
 	CentralRemoteThread.thread_status = FALSE;
 	return EPHIDGET_OK;
 }

@@ -911,7 +911,7 @@ tryagain:
 		return 0;
 	} else
 	{
-		pu_log(PUL_VERB,0,"Recieved: \"%s\"", (char *)buf);
+		pu_log(PUL_VERB,0,"Received: \"%s\"", (char *)buf);
 		return res;
 	}
 }

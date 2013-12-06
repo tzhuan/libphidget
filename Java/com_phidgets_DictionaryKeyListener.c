@@ -125,8 +125,10 @@ key_handler(CPhidgetDictionaryHandle h, void *arg, const char *key, const char *
 		}
 	}
 
+	(*env)->DeleteLocalRef (env, k);
+	(*env)->DeleteLocalRef (env, v);
+
 	(*env)->DeleteLocalRef(env, keyEvent);
-	(*ph_vm)->DetachCurrentThread(ph_vm);
 
 	return 0;
 }

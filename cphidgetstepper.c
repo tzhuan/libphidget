@@ -55,39 +55,40 @@ CPHIDGETINIT(Stepper)
 	phid->outputPacketLen = 0;
 	
 	//Setup max/min values
-	switch(phid->phid.deviceIDSpec)
+	switch(phid->phid.deviceUID)
 	{
-		case PHIDID_UNIPOLAR_STEPPER_4MOTOR:
-			if ((phid->phid.deviceVersion >= 100) && (phid->phid.deviceVersion < 200))
-			{
-				phid->microSteps = 2;
-				phid->motorSpeedMax = ((phid->microSteps * 0x100) - 1) * 0.75;
-				phid->motorSpeedMin = 0;
-				phid->accelerationMax = (250 * (0.75 * 0.75)) * 0x3f;
-				phid->accelerationMin = (250 * (0.75 * 0.75));
-				phid->motorPositionMax = 0x7FFFFFFFFFLL;
-				phid->motorPositionMin = -0x7FFFFFFFFFLL;
-				phid->currentMax = PUNK_DBL;
-				phid->currentMin = PUNK_DBL;
-			}
-			else
-				return EPHIDGET_BADVERSION;
+		case PHIDUID_STEPPER_UNIPOLAR_4MOTOR:
+			phid->microSteps = 2;
+			phid->motorSpeedMax = ((phid->microSteps * 0x100) - 1) * 0.75;
+			phid->motorSpeedMin = 0;
+			phid->accelerationMax = (250 * (0.75 * 0.75)) * 0x3f;
+			phid->accelerationMin = (250 * (0.75 * 0.75));
+			phid->motorPositionMax = 0x7FFFFFFFFFLL;
+			phid->motorPositionMin = -0x7FFFFFFFFFLL;
+			phid->currentMax = PUNK_DBL;
+			phid->currentMin = PUNK_DBL;
 			break;
-		case PHIDID_BIPOLAR_STEPPER_1MOTOR:
-			if ((phid->phid.deviceVersion >= 100) && (phid->phid.deviceVersion < 200))
-			{
-				phid->microSteps = 16;
-				phid->motorSpeedMax = 8 * phid->microSteps * 0x100; //0x8000
-				phid->motorSpeedMin = 0;
-				phid->accelerationMax = 4000 * 0xff;
-				phid->accelerationMin = 4000;
-				phid->motorPositionMax = 0x7FFFFFFFFFLL;
-				phid->motorPositionMin = -0x7FFFFFFFFFLL;
-				phid->currentMax = 2.492;
-				phid->currentMin = 0.0542;
-			}
-			else
-				return EPHIDGET_BADVERSION;
+		case PHIDUID_STEPPER_BIPOLAR_1MOTOR:
+			phid->microSteps = 16;
+			phid->motorSpeedMax = 8 * phid->microSteps * 0x100; //0x8000
+			phid->motorSpeedMin = 0;
+			phid->accelerationMax = 4000 * 0xff;
+			phid->accelerationMin = 4000;
+			phid->motorPositionMax = 0x7FFFFFFFFFLL;
+			phid->motorPositionMin = -0x7FFFFFFFFFLL;
+			phid->currentMax = 2.492;
+			phid->currentMin = 0.0542;
+			break;
+		case PHIDUID_STEPPER_BIPOLAR_1MOTOR_M3:
+			phid->microSteps = 16;
+			phid->motorSpeedMax = 250000; //nice round number
+			phid->motorSpeedMin = 0;
+			phid->accelerationMax = 10000000;
+			phid->accelerationMin = 2;
+			phid->motorPositionMax = 1000000000000000LL; // +-1 Quadrillion - enough for 211 years at max speed
+			phid->motorPositionMin = -1000000000000000LL;
+			phid->currentMax = 4;
+			phid->currentMin = 0;
 			break;
 		default:
 			return EPHIDGET_UNEXPECTED;
@@ -113,7 +114,7 @@ CPHIDGETINIT(Stepper)
 	CPhidget_read((CPhidgetHandle)phid);
 
 	//At this point, we can only recover (maybe) the position, engaged state, set others to unknown
-	for (i = 0; i<phid->phid.attr.advancedservo.numMotors; i++)
+	for (i = 0; i<phid->phid.attr.stepper.numMotors; i++)
 	{
 		phid->motorPosition[i] = phid->motorPositionEcho[i];
 		phid->motorEngagedState[i] = phid->motorEngagedStateEcho[i];
@@ -152,39 +153,33 @@ CPHIDGETDATA(Stepper)
 	ZEROMEM(lastInput, sizeof(lastInput));
 
 	//Parse device packets - store data locally
-	switch(phid->phid.deviceIDSpec)
+	switch(phid->phid.deviceUID)
 	{
-		case PHIDID_UNIPOLAR_STEPPER_4MOTOR:
-			if ((phid->phid.deviceVersion >= 100) && (phid->phid.deviceVersion < 200))
+		case PHIDUID_STEPPER_UNIPOLAR_4MOTOR:
+			for (i = 0; i < phid->phid.attr.stepper.numMotors; i++)
 			{
-				for (i = 0; i < phid->phid.attr.stepper.numMotors; i++)
-				{
-					phid->packetCounterEcho[i] = buffer[0+(i*9)] & 0x0F;
-					motorEngaged[i] = (buffer[0+(i*9)] & MOTOR_DISABLED_STEPPER) ? PFALSE : PTRUE;
-					motorDone[i] = (buffer[0+(i*9)] & MOTOR_DONE_STEPPER) ? PTRUE : PFALSE;
+				phid->packetCounterEcho[i] = buffer[0+(i*9)] & 0x0F;
+				motorEngaged[i] = (buffer[0+(i*9)] & MOTOR_DISABLED_STEPPER) ? PFALSE : PTRUE;
+				motorDone[i] = (buffer[0+(i*9)] & MOTOR_DONE_STEPPER) ? PTRUE : PFALSE;
 
-					speed[i] = (double)((signed short)((buffer[1+(i*9)] << 8) | buffer[2+(i*9)]));
-					speed[i] = (double)((speed[i] / 511.0) * phid->motorSpeedMax);
+				speed[i] = (double)((signed short)((buffer[1+(i*9)] << 8) | buffer[2+(i*9)]));
+				speed[i] = (double)((speed[i] / 511.0) * phid->motorSpeedMax);
 
-					position[i] = ((((__int64)(signed char)buffer[3+(i*9)]) << 40) +
-						(((__uint64)buffer[4+(i*9)]) << 32) +
-						(((__uint64)buffer[5+(i*9)]) << 24) +
-						(((__uint64)buffer[6+(i*9)]) << 16) +
-						(((__uint64)buffer[7+(i*9)]) << 8) +
-						((__uint64)buffer[8+(i*9)]));
+				position[i] = ((((__int64)(signed char)buffer[3+(i*9)]) << 40) +
+					(((__uint64)buffer[4+(i*9)]) << 32) +
+					(((__uint64)buffer[5+(i*9)]) << 24) +
+					(((__uint64)buffer[6+(i*9)]) << 16) +
+					(((__uint64)buffer[7+(i*9)]) << 8) +
+					((__uint64)buffer[8+(i*9)]));
 
-					position[i] -= 0x20; //round
-					position[i] >>= 6;
+				position[i] -= 0x20; //round
+				position[i] >>= 6;
 
-					//current is not returned
-					current[i] = PUNK_DBL;
-				}
+				//current is not returned
+				current[i] = PUNK_DBL;
 			}
-			else
-				return EPHIDGET_UNEXPECTED;
 			break;
-		case PHIDID_BIPOLAR_STEPPER_1MOTOR:
-			if ((phid->phid.deviceVersion >= 100) && (phid->phid.deviceVersion < 200))
+		case PHIDUID_STEPPER_BIPOLAR_1MOTOR:
 			{
 				double Vad;
 				phid->packetCounterEcho[0] = buffer[0] & 0x0F;
@@ -218,8 +213,25 @@ CPHIDGETDATA(Stepper)
 				Vad = (((unsigned char)buffer[10] * 4.16 ) / 255.0); // The voltage sensed, to a max of 4.16v
 				current[0] = round_double((Vad / (BIPOLAR_STEPPER_CURRENT_SENSE_GAIN * BIPOLAR_STEPPER_CURRENT_LIMIT_Rs)), 3);
 			}
-			else
-				return EPHIDGET_UNEXPECTED;
+			break;
+		case PHIDUID_STEPPER_BIPOLAR_1MOTOR_M3:
+			{
+				phid->packetCounterEcho[0] = buffer[0] & 0x0F;
+				motorEngaged[0] = (buffer[0] & MOTOR_DISABLED_STEPPER) ? PFALSE : PTRUE;
+				motorDone[0] = (buffer[0] & MOTOR_DONE_STEPPER) ? PTRUE : PFALSE;
+
+				//24.8 floating point format
+				speed[0] = (double)( ((signed int)((((signed char)buffer[1]) << 24) | (buffer[2] << 16) | (buffer[3] << 8) | buffer[4])) / 256.0);
+
+				position[0] = ((((__int64)(signed char)buffer[5]) << 56) +
+					(((__uint64)buffer[6]) << 48) +
+					(((__uint64)buffer[7]) << 40) +
+					(((__uint64)buffer[8]) << 32) +
+					(((__uint64)buffer[9]) << 24) +
+					(((__uint64)buffer[10]) << 16) +
+					(((__uint64)buffer[11]) << 8) +
+					((__uint64)buffer[12]));
+			}
 			break;
 		default:
 			return EPHIDGET_UNEXPECTED;
@@ -238,7 +250,7 @@ CPHIDGETDATA(Stepper)
 			phid->motorPositionEcho[i] = position[i];
 
 		if(speed[i] > phid->motorSpeedMax || speed[i] < -phid->motorSpeedMax)
-			LOG(PHIDGET_LOG_WARNING, "Phidget stepper recieved out of range speed data: %lE", speed[i]);
+			LOG(PHIDGET_LOG_WARNING, "Phidget stepper received out of range speed data: %lE", speed[i]);
 		else
 			phid->motorSpeedEcho[i] = speed[i];
 
@@ -372,65 +384,59 @@ CMAKEPACKETINDEXED(Stepper)
 			return EPHIDGET_UNEXPECTED;
 	}
 
-	switch(phid->phid.deviceIDSpec)
+	switch(phid->phid.deviceUID)
 	{
-		case PHIDID_UNIPOLAR_STEPPER_4MOTOR:
-			if ((phid->phid.deviceVersion >= 100) && (phid->phid.deviceVersion < 200))
+		case PHIDUID_STEPPER_UNIPOLAR_4MOTOR:
+			//2-bit index, 2-bit packet type, 4-bit counter 
+			buffer[0] = (Index << 6) | packet_type | phid->packetCounter[Index]; 
+			//flags
+			buffer[1] = flags; 
+
+			switch(packet_type)
 			{
-				//2-bit index, 2-bit packet type, 4-bit counter 
-				buffer[0] = (Index << 6) | packet_type | phid->packetCounter[Index]; 
-				//flags
-				buffer[1] = flags; 
+				case STEPPER_POSITION_PACKET:
+					position = phid->motorPosition[Index] << 6;
+					position += 0x20;
 
-				switch(packet_type)
-				{
-					case STEPPER_POSITION_PACKET:
-						position = phid->motorPosition[Index] << 6;
-						position += 0x20;
+					//48-bit position
+					buffer[2] = (unsigned char)(position >> 40);
+					buffer[3] = (unsigned char)(position >> 32);
+					buffer[4] = (unsigned char)(position >> 24);
+					buffer[5] = (unsigned char)(position >> 16);
+					buffer[6] = (unsigned char)(position >> 8);
+					buffer[7] = (unsigned char)(position);
+					break;
+				case STEPPER_VEL_ACCEL_PACKET:
+					accel = (unsigned char)round((phid->motorAcceleration[Index]/phid->accelerationMax) * 63.0);
+					speed = (unsigned short)round((phid->motorSpeed[Index]/phid->motorSpeedMax) * 511.0);
 
-						//48-bit position
-						buffer[2] = (unsigned char)(position >> 40);
-						buffer[3] = (unsigned char)(position >> 32);
-						buffer[4] = (unsigned char)(position >> 24);
-						buffer[5] = (unsigned char)(position >> 16);
-						buffer[6] = (unsigned char)(position >> 8);
-						buffer[7] = (unsigned char)(position);
-						break;
-					case STEPPER_VEL_ACCEL_PACKET:
-						accel = (unsigned char)round((phid->motorAcceleration[Index]/phid->accelerationMax) * 63.0);
-						speed = (unsigned short)round((phid->motorSpeed[Index]/phid->motorSpeedMax) * 511.0);
+					//6-bit acceleration
+					buffer[2] = accel;
+					//9-bit speed
+					buffer[3] = speed >> 8;
+					buffer[4] = speed & 0xFF;
+					//not used
+					buffer[5] = 0;
+					buffer[6] = 0;
+					buffer[7] = 0;
+					break;
+				case STEPPER_RESET_PACKET:
+					position = phid->motorPositionReset[Index] << 6;
+					position += 0x20;
 
-						//6-bit acceleration
-						buffer[2] = accel;
-						//9-bit speed
-						buffer[3] = speed >> 8;
-						buffer[4] = speed & 0xFF;
-						//not used
-						buffer[5] = 0;
-						buffer[6] = 0;
-						buffer[7] = 0;
-						break;
-					case STEPPER_RESET_PACKET:
-						position = phid->motorPositionReset[Index] << 6;
-						position += 0x20;
-
-						//48-bit position
-						buffer[2] = (unsigned char)(position >> 40);
-						buffer[3] = (unsigned char)(position >> 32);
-						buffer[4] = (unsigned char)(position >> 24);
-						buffer[5] = (unsigned char)(position >> 16);
-						buffer[6] = (unsigned char)(position >> 8);
-						buffer[7] = (unsigned char)(position);
-						break;
-					default:
-						return EPHIDGET_UNEXPECTED;
-				}
+					//48-bit position
+					buffer[2] = (unsigned char)(position >> 40);
+					buffer[3] = (unsigned char)(position >> 32);
+					buffer[4] = (unsigned char)(position >> 24);
+					buffer[5] = (unsigned char)(position >> 16);
+					buffer[6] = (unsigned char)(position >> 8);
+					buffer[7] = (unsigned char)(position);
+					break;
+				default:
+					return EPHIDGET_UNEXPECTED;
 			}
-			else
-				return EPHIDGET_UNEXPECTED;
 			break;
-		case PHIDID_BIPOLAR_STEPPER_1MOTOR:
-			if ((phid->phid.deviceVersion >= 100) && (phid->phid.deviceVersion < 200))
+		case PHIDUID_STEPPER_BIPOLAR_1MOTOR:
 			{
 				unsigned char currentLimit = 0;
 				double Vref;
@@ -459,7 +465,7 @@ CMAKEPACKETINDEXED(Stepper)
 							phid->motorCurrentLimit[Index] = 0.50; //choose 500mA - should at least work for the most part
 
 						accel = (unsigned char)round((phid->motorAcceleration[Index]/phid->accelerationMax) * 255.0);
-						speed = (unsigned short)round((phid->motorSpeed[Index]/phid->motorSpeedMax) * 4096.0);
+						speed = (unsigned short)round((phid->motorSpeed[Index]/phid->motorSpeedMax) * 4095.0);
 
 						// highest Vref is 3v (2.5A limit as defined by stepping chip)
 						// The 8 is defined by the stepping chip - (ItripMAX = Vref/8Rs)
@@ -495,8 +501,69 @@ CMAKEPACKETINDEXED(Stepper)
 						return EPHIDGET_UNEXPECTED;
 				}
 			}
-			else
-				return EPHIDGET_UNEXPECTED;
+			break;
+		case PHIDUID_STEPPER_BIPOLAR_1MOTOR_M3:
+			{
+				unsigned char currentLimit = 0;
+				int accelInt, velInt;
+
+				//2-bit index, 2-bit packet type, 4-bit counter 
+				buffer[0] = (Index << 6) | packet_type | phid->packetCounter[Index]; 
+				//flags
+				buffer[1] = flags; 
+
+				switch(packet_type)
+				{
+					case STEPPER_POSITION_PACKET:
+						//64-bit position
+						buffer[2] = (unsigned char)(phid->motorPosition[Index] >> 56);
+						buffer[3] = (unsigned char)(phid->motorPosition[Index] >> 48);
+						buffer[4] = (unsigned char)(phid->motorPosition[Index] >> 40);
+						buffer[5] = (unsigned char)(phid->motorPosition[Index] >> 32);
+						buffer[6] = (unsigned char)(phid->motorPosition[Index] >> 24);
+						buffer[7] = (unsigned char)(phid->motorPosition[Index] >> 16);
+						buffer[8] = (unsigned char)(phid->motorPosition[Index] >> 8);
+						buffer[9] = (unsigned char)(phid->motorPosition[Index]);
+						break;
+					case STEPPER_VEL_ACCEL_PACKET:
+						if(phid->motorCurrentLimit[Index] == PUNK_DBL)
+							phid->motorCurrentLimit[Index] = 0.50; //choose 500mA - should at least work for the most part
+
+						accelInt = (int)phid->motorAcceleration[Index];
+						velInt = (int)phid->motorSpeed[Index];
+						currentLimit = (unsigned char)round((phid->motorCurrentLimit[Index]/phid->currentMax) * 255.0);
+
+						//3-byte acceleration
+						buffer[2] = accelInt >> 16;
+						buffer[3] = accelInt >> 8;
+						buffer[4] = accelInt;
+
+						//3-byte velocity
+						buffer[5] = velInt >> 16;
+						buffer[6] = velInt >> 8;
+						buffer[7] = velInt;
+
+						//8-bit current limit
+						buffer[8] = currentLimit;
+
+						//not used
+						buffer[9] = 0;
+						break;
+					case STEPPER_RESET_PACKET:
+						//64-bit position
+						buffer[2] = (unsigned char)(phid->motorPositionReset[Index] >> 56);
+						buffer[3] = (unsigned char)(phid->motorPositionReset[Index] >> 48);
+						buffer[4] = (unsigned char)(phid->motorPositionReset[Index] >> 40);
+						buffer[5] = (unsigned char)(phid->motorPositionReset[Index] >> 32);
+						buffer[6] = (unsigned char)(phid->motorPositionReset[Index] >> 24);
+						buffer[7] = (unsigned char)(phid->motorPositionReset[Index] >> 16);
+						buffer[8] = (unsigned char)(phid->motorPositionReset[Index] >> 8);
+						buffer[9] = (unsigned char)(phid->motorPositionReset[Index]);
+						break;
+					default:
+						return EPHIDGET_UNEXPECTED;
+				}
+			}
 			break;
 		default:
 			return EPHIDGET_UNEXPECTED;
@@ -778,20 +845,16 @@ CGETINDEX(Stepper,Current,double)
 	TESTDEVICETYPE(PHIDCLASS_STEPPER)
 	TESTATTACHED
 
-	//only the bipolar has current sense
-	switch(phid->phid.deviceIDSpec)
+	//only the original bipolar has current sense
+	switch(phid->phid.deviceUID)
 	{
-		case PHIDID_BIPOLAR_STEPPER_1MOTOR:
+		case PHIDUID_STEPPER_BIPOLAR_1MOTOR:
 			TESTINDEX(phid.attr.stepper.numMotors)
-			if ((phid->phid.deviceVersion >= 100) && (phid->phid.deviceVersion < 200))
-			{
-				TESTMASGN(motorSensedCurrent[Index], PUNK_DBL)
-				MASGN(motorSensedCurrent[Index])
-			}
-			else
-				return EPHIDGET_UNEXPECTED;
+			TESTMASGN(motorSensedCurrent[Index], PUNK_DBL)
+			MASGN(motorSensedCurrent[Index])
 			break;
-		case PHIDID_UNIPOLAR_STEPPER_4MOTOR:
+		case PHIDUID_STEPPER_BIPOLAR_1MOTOR_M3:
+		case PHIDUID_STEPPER_UNIPOLAR_4MOTOR:
 		default:
 			return EPHIDGET_UNSUPPORTED;
 	}
@@ -803,19 +866,15 @@ CGETINDEX(Stepper,CurrentLimit,double)
 	TESTATTACHED
 
 	//only the bipolar has currentLimit
-	switch(phid->phid.deviceIDSpec)
+	switch(phid->phid.deviceUID)
 	{
-		case PHIDID_BIPOLAR_STEPPER_1MOTOR:
+		case PHIDUID_STEPPER_BIPOLAR_1MOTOR:
+		case PHIDUID_STEPPER_BIPOLAR_1MOTOR_M3:
 			TESTINDEX(phid.attr.stepper.numMotors)
-			if ((phid->phid.deviceVersion >= 100) && (phid->phid.deviceVersion < 200))
-			{
-				TESTMASGN(motorCurrentLimit[Index], PUNK_DBL)
-				MASGN(motorCurrentLimit[Index])
-			}
-			else
-				return EPHIDGET_UNEXPECTED;
+			TESTMASGN(motorCurrentLimit[Index], PUNK_DBL)
+			MASGN(motorCurrentLimit[Index])
 			break;
-		case PHIDID_UNIPOLAR_STEPPER_4MOTOR:
+		case PHIDUID_STEPPER_UNIPOLAR_4MOTOR:
 		default:
 			return EPHIDGET_UNSUPPORTED;
 	}
@@ -826,22 +885,18 @@ CSETINDEX(Stepper,CurrentLimit,double)
 	TESTATTACHED
 
 	//only the bipolar has currentLimit
-	switch(phid->phid.deviceIDSpec)
+	switch(phid->phid.deviceUID)
 	{
-		case PHIDID_BIPOLAR_STEPPER_1MOTOR:
+		case PHIDUID_STEPPER_BIPOLAR_1MOTOR:
+		case PHIDUID_STEPPER_BIPOLAR_1MOTOR_M3:
 			TESTINDEX(phid.attr.stepper.numMotors)
 			TESTRANGE(phid->currentMin, phid->currentMax)
-			if ((phid->phid.deviceVersion >= 100) && (phid->phid.deviceVersion < 200))
-			{
-				if(CPhidget_statusFlagIsSet(phid->phid.status, PHIDGET_REMOTE_FLAG))
-					ADDNETWORKKEYINDEXED(CurrentLimit, "%lE", motorCurrentLimit);
-				else
-					SENDPACKETINDEXED(Stepper, motorCurrentLimit[Index], Index + STEPPER_VEL_ACCEL_PACKET);
-			}
+			if(CPhidget_statusFlagIsSet(phid->phid.status, PHIDGET_REMOTE_FLAG))
+				ADDNETWORKKEYINDEXED(CurrentLimit, "%lE", motorCurrentLimit);
 			else
-				return EPHIDGET_UNEXPECTED;
+				SENDPACKETINDEXED(Stepper, motorCurrentLimit[Index], Index + STEPPER_VEL_ACCEL_PACKET);
 			break;
-		case PHIDID_UNIPOLAR_STEPPER_4MOTOR:
+		case PHIDUID_STEPPER_UNIPOLAR_4MOTOR:
 		default:
 			return EPHIDGET_UNSUPPORTED;
 	}
@@ -855,19 +910,15 @@ CGETINDEX(Stepper,CurrentMax,double)
 	TESTATTACHED
 
 	//only the bipolar has current
-	switch(phid->phid.deviceIDSpec)
+	switch(phid->phid.deviceUID)
 	{
-		case PHIDID_BIPOLAR_STEPPER_1MOTOR:
+		case PHIDUID_STEPPER_BIPOLAR_1MOTOR:
+		case PHIDUID_STEPPER_BIPOLAR_1MOTOR_M3:
 			TESTINDEX(phid.attr.stepper.numMotors)
-			if ((phid->phid.deviceVersion >= 100) && (phid->phid.deviceVersion < 200))
-			{
 				TESTMASGN(currentMax, PUNK_DBL)
 				MASGN(currentMax)
-			}
-			else
-				return EPHIDGET_UNEXPECTED;
 			break;
-		case PHIDID_UNIPOLAR_STEPPER_4MOTOR:
+		case PHIDUID_STEPPER_UNIPOLAR_4MOTOR:
 		default:
 			return EPHIDGET_UNSUPPORTED;
 	}
@@ -879,19 +930,15 @@ CGETINDEX(Stepper,CurrentMin,double)
 	TESTATTACHED
 
 	//only the bipolar has current
-	switch(phid->phid.deviceIDSpec)
+	switch(phid->phid.deviceUID)
 	{
-		case PHIDID_BIPOLAR_STEPPER_1MOTOR:
+		case PHIDUID_STEPPER_BIPOLAR_1MOTOR:
+		case PHIDUID_STEPPER_BIPOLAR_1MOTOR_M3:
 			TESTINDEX(phid.attr.stepper.numMotors)
-			if ((phid->phid.deviceVersion >= 100) && (phid->phid.deviceVersion < 200))
-			{
 				TESTMASGN(currentMin, PUNK_DBL)
 				MASGN(currentMin)
-			}
-			else
-				return EPHIDGET_UNEXPECTED;
 			break;
-		case PHIDID_UNIPOLAR_STEPPER_4MOTOR:
+		case PHIDUID_STEPPER_UNIPOLAR_4MOTOR:
 		default:
 			return EPHIDGET_UNSUPPORTED;
 	}

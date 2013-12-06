@@ -124,7 +124,7 @@ public final class IRPhidget extends Phidget
 		return readRaw (buffer, 0, buffer.length);
 	}
 	/**
-	 * Returns the last recieved code. This is updated right after the code event returns.
+	 * Returns the last received code. This is updated right after the code event returns.
 	 * @return last code
 	 * @throws PhidgetException If this Phidget is not opened and attached. 
 	 * See {@link com.phidgets.Phidget#open(int) open} for information on determining if a device is attached.
@@ -207,7 +207,7 @@ public final class IRPhidget extends Phidget
 	}
 	private native void enableLearnEvents (boolean b);
 	/**
-	 * Adds a rawData listener. The rawData handler is a method that will be called when a raw IR data is recieved.
+	 * Adds a rawData listener. The rawData handler is a method that will be called when a raw IR data is received.
 	 * <p>
 	 * There is no limit on the number of rawData handlers that can be registered for a particular Phidget.
 	 * 

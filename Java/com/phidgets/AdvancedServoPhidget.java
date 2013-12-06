@@ -314,7 +314,7 @@ public final class AdvancedServoPhidget extends Phidget
 	 * Sets the speed ramping state.
 	 * <p>
 	 * Disable speed ramping to disable velocity and acceleration control. With speed ramping disabled, the servo will be sent to
-	 * the desired position immediately upon recieving the command. This is how the regular Phidget Servo Controller works.
+	 * the desired position immediately upon receiving the command. This is how the regular Phidget Servo Controller works.
 	 * <p>
 	 * This is turned on by default.
 	 *

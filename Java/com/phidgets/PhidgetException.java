@@ -1,5 +1,5 @@
 /*
- * Copyright 2006 Phidgets Inc.  All rights reserved.
+ * Copyright 2012 Phidgets Inc.  All rights reserved.
  */
 
 package com.phidgets;
@@ -52,7 +52,7 @@ public class PhidgetException extends java.lang.Exception {
 	/**
 	 * Invalid argument exception. "Invalid argument passed to function."
 	 * <P>
-	 * This exception is thrown whenever a function recieves an unexpected null pointer, or a value that is out of range. ie setting a motor's speed to 101 when the maximum is 100.
+	 * This exception is thrown whenever a function receives an unexpected null pointer, or a value that is out of range. ie setting a motor's speed to 101 when the maximum is 100.
 	 * <p>
 	 * This is returned by {@link #getErrorNumber getErrorNumber}
 	 */

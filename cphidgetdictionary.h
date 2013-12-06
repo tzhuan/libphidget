@@ -3,7 +3,7 @@
 #include "cphidget.h"
 
 /** \defgroup phiddict Phidget Dictionary 
- * Calls specific to the Phidget Dictionary.
+ * These calls are specific to the Phidget Dictionary.
  * @{
  */
 

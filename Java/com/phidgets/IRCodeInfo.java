@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2006 Phidgets Inc.  All rights reserved.
+ * Copyright 2012 Phidgets Inc.  All rights reserved.
  */
 
 package com.phidgets;

@@ -125,6 +125,7 @@ int CPhidgetDetachEvent(CPhidgetHandle phid) {
 				travPhid->fptrDetach((CPhidgetHandle)travPhid, travPhid->fptrDetachptr);
 
 			travPhid->deviceIDSpec = 0;
+			travPhid->deviceUID = 0;
 			
 #if !defined(_MACOSX) && !defined(WINCE)
 			CPhidgetFHandle_free(travPhid->CPhidgetFHandle);
@@ -176,7 +177,7 @@ static int sendInitialEvents()
 int CPhidgetManager_poll()
 {
 	CPhidgetList *curList = 0, *detachList = 0;
-	CPhidgetList *trav = 0;
+	CPhidgetList *trav = 0, *trav2 = 0;
 	CPhidgetHandle foundPhidget;
 			
 	if(!managerLockInitialized)
@@ -202,8 +203,7 @@ int CPhidgetManager_poll()
 	}
 	for (trav=curList; trav; trav = trav->next)
 	{
-		if(CList_findInList((CListHandle)AttachedDevices, trav->phid, CPhidget_areExtraEqual, NULL) ==
-		    EPHIDGET_NOTFOUND)
+		if(CList_findInList((CListHandle)AttachedDevices, trav->phid, CPhidget_areExtraEqual, NULL) == EPHIDGET_NOTFOUND)
 		{
 			CPhidgetAttachEvent(trav->phid);
 		}
@@ -214,15 +214,27 @@ int CPhidgetManager_poll()
 		CThread_mutex_lock(&activeDevicesLock);
 		if(CList_findInList((CListHandle)ActiveDevices, trav->phid, CPhidget_areEqual, (void **)&foundPhidget) == EPHIDGET_OK)
 		{		
-			if(CPhidget_statusFlagIsSet(foundPhidget->status, PHIDGET_ATTACHED_FLAG))
+			if(CPhidget_statusFlagIsSet(foundPhidget->status, PHIDGET_ATTACHED_FLAG)
+				&& CPhidget_statusFlagIsSet(foundPhidget->status, PHIDGET_USB_ERROR_FLAG))
 			{
-				if(CPhidget_statusFlagIsSet(foundPhidget->status, PHIDGET_USB_ERROR_FLAG))
+				LOG(PHIDGET_LOG_WARNING,"PHIDGET_USB_ERROR_FLAG is set - cycling device through a detach");
+				CList_addToList((CListHandle *)&detachList, trav->phid, CPhidget_areEqual);
+				
+				//if this is a composite device, we must find it's pair and detach that as well.
+				//same serial, but different interface num
+				for (trav2=curList; trav2; trav2 = trav2->next)
 				{
-					LOG(PHIDGET_LOG_WARNING,"PHIDGET_USB_ERROR_FLAG is set - cycling device through a detach");
-					CList_addToList((CListHandle *)&detachList, trav->phid, CPhidget_areEqual);
+					if(trav->phid->serialNumber == trav2->phid->serialNumber
+					&& trav->phid->deviceDef->pdd_iid != trav2->phid->deviceDef->pdd_iid)
+					{
+						LOG(PHIDGET_LOG_WARNING,"PHIDGET_USB_ERROR_FLAG is set - cycling composite device 2nd interface through a detach");
+						CList_addToList((CListHandle *)&detachList, trav2->phid, CPhidget_areEqual);
+					}
 				}
 			}
 		}
+		
+		
 		CThread_mutex_unlock(&activeDevicesLock);
 	}
 	for (trav=detachList; trav; trav = trav->next)
@@ -298,6 +310,10 @@ int CCONV CPhidgetManager_close(CPhidgetManagerHandle phidm)
 	if(!ActiveDevices && !ActivePhidgetManagers)
 	{
 		JoinCentralThread();
+		//Shut down USB
+#if defined(_LINUX) && !defined(_ANDROID)
+		CUSBUninit();
+#endif
 	}
 
 	CPhidget_clearStatusFlag(&phidm->status, PHIDGET_OPENED_FLAG, &phidm->lock);

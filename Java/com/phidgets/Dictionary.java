@@ -1,5 +1,5 @@
 /*
- * Copyright 2006 Phidgets Inc.  All rights reserved.
+ * Copyright 2012 Phidgets Inc.  All rights reserved.
  */
 
 package com.phidgets;
@@ -228,7 +228,7 @@ public class Dictionary
 	}
 	/**
 	 * Closes this Dictionary.
-	 * This will shut down all threads dealing with this Dictionary and you won't recieve any more events.
+	 * This will shut down all threads dealing with this Dictionary and you won't receive any more events.
 	 * 
 	 * @throws PhidgetException If this Dictionary is not opened. 
 	 */

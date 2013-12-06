@@ -84,6 +84,7 @@ Java_com_phidgets_GPSPhidget_getDateAndTime(JNIEnv *env, jobject obj)
 		PH_THROW(EPHIDGET_UNEXPECTED);
 		return NULL;
 	}
+	(*env)->DeleteLocalRef (env, GPSTimeZone);
 
 	(*env)->CallVoidMethod(env, GPSTimeAndDate, irCode_set, 1, cGPSDate.tm_year);  //year
 	(*env)->CallVoidMethod(env, GPSTimeAndDate, irCode_set, 2, (cGPSDate.tm_mon-1)); //month(0-11)  

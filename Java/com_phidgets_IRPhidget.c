@@ -125,6 +125,7 @@ code_handler(CPhidgetIRHandle h, void *arg, unsigned char *data, int dataLength,
 	{
 		return -1;
 	}
+	(*env)->DeleteLocalRef(env, js);
 
 	if (!(codeEv = (*env)->NewObject(env, codeEvent_class,
 	    codeEvent_cons, obj, ircode, repeat)))
@@ -132,13 +133,11 @@ code_handler(CPhidgetIRHandle h, void *arg, unsigned char *data, int dataLength,
 		(*env)->DeleteLocalRef(env, ircode);
 		return -1;
 	}
+	(*env)->DeleteLocalRef(env, ircode);
 
 	(*env)->CallVoidMethod(env, obj, fireCode_mid, codeEv);
 
 	(*env)->DeleteLocalRef(env, codeEv);
-	(*env)->DeleteLocalRef(env, ircode);
-
-	(*ph_vm)->DetachCurrentThread(ph_vm);
 
 	return 0;
 
@@ -173,15 +172,15 @@ learn_handler(CPhidgetIRHandle h, void *arg, unsigned char *data, int dataLength
 
 	//create and fill in short array
 	if(dataLength > 0){
-	codeData = (*env)->NewShortArray(env, dataLength);
-	if (!codeData)
-		return -1;
-	datas = (*env)->GetShortArrayElements(env, codeData, 0);
-	if (!datas)
-		return -1;
-	for (i=0; i<dataLength; i++)
-		datas[i] = (jshort)data[i];
-	(*env)->ReleaseShortArrayElements(env, codeData, datas, 0);
+		codeData = (*env)->NewShortArray(env, dataLength);
+		if (!codeData)
+			return -1;
+		datas = (*env)->GetShortArrayElements(env, codeData, 0);
+		if (!datas)
+			return -1;
+		for (i=0; i<dataLength; i++)
+			datas[i] = (jshort)data[i];
+		(*env)->ReleaseShortArrayElements(env, codeData, datas, 0);
 	}
 	else
 		codeData=NULL;
@@ -190,6 +189,8 @@ learn_handler(CPhidgetIRHandle h, void *arg, unsigned char *data, int dataLength
 	{
 		return -1;
 	}
+	if(codeData)
+		(*env)->DeleteLocalRef(env, codeData);
 
 	//Header
 	if(codeInfo->header[0])
@@ -264,10 +265,12 @@ learn_handler(CPhidgetIRHandle h, void *arg, unsigned char *data, int dataLength
 		{
 			return -1;
 		}
+		(*env)->DeleteLocalRef(env, codeData);
 	}
 	else{
-		codeData=NULL;
+		togglemask=NULL;
 	}
+
 	//create IRCodeInfo object
 	if (!(ircodeinfo = (*env)->NewObject(env, irCodeInfo_class, irCodeInfo_cons, 
 		codeInfo->encoding, codeInfo->bitCount, headerArray, zeroArray, oneArray,
@@ -278,6 +281,15 @@ learn_handler(CPhidgetIRHandle h, void *arg, unsigned char *data, int dataLength
 		return -1;
 	}
 
+	if(headerArray)
+		(*env)->DeleteLocalRef(env, headerArray);
+	(*env)->DeleteLocalRef(env, zeroArray);
+	(*env)->DeleteLocalRef(env, oneArray);
+	if(repeatArray)
+		(*env)->DeleteLocalRef(env, repeatArray);
+	if(togglemask)
+		(*env)->DeleteLocalRef(env, togglemask);
+
 	//create IRLearn object
 	if (!(irlearn = (*env)->NewObject(env, irLearn_class, irLearn_cons, ircode, ircodeinfo)))
 	{
@@ -285,24 +297,20 @@ learn_handler(CPhidgetIRHandle h, void *arg, unsigned char *data, int dataLength
 		(*env)->DeleteLocalRef(env, ircodeinfo);
 		return -1;
 	}
+	(*env)->DeleteLocalRef(env, ircode);
+	(*env)->DeleteLocalRef(env, ircodeinfo);
 
 	if (!(learnEv = (*env)->NewObject(env, learnEvent_class,
 	    learnEvent_cons, obj, irlearn)))
 	{
-		(*env)->DeleteLocalRef(env, ircode);
-		(*env)->DeleteLocalRef(env, ircodeinfo);
 		(*env)->DeleteLocalRef(env, irlearn);
 		return -1;
 	}
+	(*env)->DeleteLocalRef(env, irlearn);
 
 	(*env)->CallVoidMethod(env, obj, fireLearn_mid, learnEv);
 
 	(*env)->DeleteLocalRef(env, learnEv);
-	(*env)->DeleteLocalRef(env, ircode);
-	(*env)->DeleteLocalRef(env, ircodeinfo);
-	(*env)->DeleteLocalRef(env, irlearn);
-
-	(*ph_vm)->DetachCurrentThread(ph_vm);
 
 	return 0;
 }
@@ -344,12 +352,11 @@ rawData_handler(CPhidgetIRHandle h, void *arg, int *data, int dataLength)
 
 	if (!(rawDataEv = (*env)->NewObject(env, rawDataEvent_class, rawDataEvent_cons, obj, js)))
 		return -1;
+	(*env)->DeleteLocalRef(env, js);
 
 	(*env)->CallVoidMethod(env, obj, fireRawData_mid, rawDataEv);
 
 	(*env)->DeleteLocalRef(env, rawDataEv);
-
-	(*ph_vm)->DetachCurrentThread(ph_vm);
 
 	return 0;
 }

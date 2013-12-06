@@ -184,7 +184,7 @@ pdc_init(void)
 
 	if ((res = regcomp(&pendingex, PENDING_PATTERN, REG_EXTENDED)) != 0) {
 		LOG_STDERR(PHIDGET_LOG_CRITICAL, "pending report pattern compilation error %d", res);
-		ABORT();
+		abort();
 	}
 	initialized = 1;
 	return 1;
@@ -396,6 +396,8 @@ next:
 		//do cleanup - this handles stuff outside on the dictionary code, etc.
 		if (pdcs->pdcs_cleanup)
 			pdcs->pdcs_cleanup(pdcs->pdcs_cleanup_ptr);
+		if(fptrJavaDetachCurrentThread)
+			fptrJavaDetachCurrentThread();
 		return (void *)(size_t)(-1 * errno); // XXX pdcs errno function
 	}
 
@@ -1418,6 +1420,8 @@ pdc_get(pdc_session_t *pdcs, const char *key, char *val, int vallen, char *errde
 		}
 		if(!(resultval = strstr(results, "value ")))
 		{
+			//key does not exist
+			res = 2;
 			val[0] = 0;
 			goto end;
 		}
@@ -1425,6 +1429,8 @@ pdc_get(pdc_session_t *pdcs, const char *key, char *val, int vallen, char *errde
 
 		if (!unescape(resultval, &ueval, &uevlen)) {
 			/* XXX log */
+			res = 0; //error
+			val[0] = 0;
 			goto end;
 		}
 		strncpy(val, ueval, vallen-1);

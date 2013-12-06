@@ -13,16 +13,16 @@
  this easy to use and robust Application Program Interface (API) library.
  
  The library was written originally for Windows, but has been ported to MacOS and Linux.  
- Although the library is written in C, the functions can be called from a number of languages including C, C++, Objective-C, Matlab, etc.  
+ Although the library is written in C, the functions can be called from a number of languages including C#, C/C++, Java, Python, Visual Basic, and many more.  
  The full library source is not available for all platforms - however, the Linux distribution contains all platform independent code.
  
  See the <a class="el" href="modules.html">Modules</a> section for the API documentation.
  
  See \ref phidcommon for calls common to all phidgets.
 
- Refer to the <a class="el" href="http://www.phidgets.com/information.php#products" target="_blank">Product manual</a> for your Phidget and the 
- <a class="el" href="http://www.phidgets.com/documentation/Programming_Manual.pdf" target="_blank">Programming Manual</a> for more detailed, language inspecific API documentation. 
- Also, there are a set of C/C++ examples available for download.
+ Refer to the User Guide for your device and the 
+ <a class="el" href="http://www.phidgets.com/docs/General_Phidget_Programming" target="_blank">General Phidget Programming</a> page for more detailed, language inspecific API documentation and examples. 
+ You can download a set of C/C++ example code from the Quick Downloads section of the <a class="el" href="http://www.phidgets.com/docs/Language_-_C/C%2B%2B#Quick_Downloads" target="_blank"> C/C++ Language Page</a>.
 
  \section general_sec General Usage
 Phidgets in C are accessed/controlled via handles. Every Phidget has it's own Handle, as well as a generic Phidget handle. These handles are simply pointers

@@ -2,7 +2,7 @@
 #define __CPHIDGET
 
 /** \defgroup phidcommon Phidget Common
- * Calls common to all Phidgets. See the programming manual for more specific API details, supported functionality, units, etc.
+ * These calls are common to all Phidgets objects. See the <a class="el" href="http://www.phidgets.com/docs/General_Phidget_Programming" target="_blank">General Phidget Programming</a> page for more in-depth usage instructions and examples.
  * @{
  */
  
@@ -27,6 +27,7 @@ typedef struct _CPhidget_Timestamp {
  * Platform independent 64-bit integer.
  */
 typedef long long __int64;
+typedef unsigned long long __uint64;
 #endif
 
 #include "cphidgetconstantsinternal.h"
@@ -102,6 +103,13 @@ typedef struct {
 	const char *pdd_name;
 } CPhidgetDeviceDef;
 
+typedef struct {
+	CPhidget_DeviceUID pdd_uid;
+	CPhidget_DeviceID pdd_id;
+	int pdd_vlow;
+	int pdd_vhigh;
+} CPhidgetUniqueDeviceDef;
+
 struct _CPhidget {
 	CPhidgetRemoteHandle networkInfo; //NULL if local, !NULL if remote
 	int(CCONV *fptrError)(CPhidgetHandle , void *, int, const char *);
@@ -129,6 +137,7 @@ struct _CPhidget {
 	int specificDevice;
 	CPhidget_DeviceClass deviceID;
 	CPhidget_DeviceID deviceIDSpec;
+	CPhidget_DeviceUID deviceUID;
 	const CPhidgetDeviceDef *deviceDef;
 	//int Phid_Device_Def_index;
 	int deviceVersion;
@@ -140,6 +149,9 @@ struct _CPhidget {
 	unsigned short inputReportByteLength;
 	char label[MAX_LABEL_STORAGE];
 	char *escapedLabel; //for webservice
+	char usbProduct[64];
+	char firmwareUpgradeName[30];
+	unsigned char GPPResponse;
 	int(CCONV *fptrInit)(CPhidgetHandle);
 	int(CCONV *fptrClear)(CPhidgetHandle);
 	int(CCONV *fptrEvents)(CPhidgetHandle);
@@ -191,6 +203,7 @@ extern int phidgetLocksInitialized;
 extern CThread_mutex_t activeDevicesLock, attachedDevicesLock;
 
 extern const CPhidgetDeviceDef Phid_Device_Def[];
+extern const CPhidgetUniqueDeviceDef Phid_Unique_Device_Def[];
 
 void CPhidgetFHandle_free(void *arg);
 int CPhidget_read(CPhidgetHandle phid);
@@ -209,8 +222,11 @@ double timeSince(TIME *start);
 void setTimeNow(TIME *now);
 int encodeLabelString(const char *buffer, char *out, int *outLen);
 int decodeLabelString(char *labelBuf, char *out, int serialNumber);
+int UTF16toUTF8(char *in, int inBytes, char *out);
 int labelHasWrapError(int serialNumber, char *labelBuf);
 void CPhidgetErrorEvent_free(void *arg);
+CPhidget_DeviceUID CPhidget_getUID(CPhidget_DeviceID id, int version);
+int deviceSupportsGeneralUSBProtocol(CPhidgetHandle phid);
 
 PHIDGET21_API int CCONV CPhidget_areEqual(void *arg1, void *arg2);
 PHIDGET21_API int CCONV CPhidget_areExtraEqual(void *arg1, void *arg2);
@@ -221,7 +237,43 @@ PHIDGET21_API int CCONV CPhidget_create(CPhidgetHandle *phid);
 
 PHIDGET21_API int CCONV CPhidget_calibrate_gainoffset(CPhidgetHandle phid, int index, unsigned short offset, unsigned long gain);
 
+//Some constants and function for new M3 Phidgets (General Packet Protocol)
+
+//Bit 7 (MSB)
+#define PHID_USB_GENERAL_PACKET_FLAG 0x80
+
+//Bit 6 (used for return value on IN stream)
+#define PHID_USB_GENERAL_PACKET_SUCCESS	0x00
+#define PHID_USB_GENERAL_PACKET_FAIL	0x40
+
+//Bits 0-5 (up to 31 types)
+#define PHID_USB_GENERAL_PACKET_IGNORE 0x00
+#define PHID_USB_GENERAL_PACKET_REBOOT_FIRMWARE_UPGRADE	0x01
+#define PHID_USB_GENERAL_PACKET_REBOOT_ISP 0x02
+//This is more data for when we need to send more then will fit in a single packet.
+#define PHID_USB_GENERAL_PACKET_CONTINUATION 0x03
+#define PHID_USB_GENERAL_PACKET_ZERO_CONFIG 0x04
+#define PHID_USB_GENERAL_PACKET_WRITE_FLASH 0x05
+#define PHID_USB_GENERAL_PACKET_FIRMWARE_UPGRADE_WRITE_SECTOR 0x06
+#define PHID_USB_GENERAL_PACKET_SET_DS_TABLE 0x07
+#define PHID_USB_GENERAL_PACKET_SET_DW_TABLE 0x08
+#define PHID_USB_GENERAL_PACKET_FIRMWARE_UPGRADE_ERASE 0x09
+#define PHID_USB_GENERAL_PACKET_ERASE_CONFIG 0x0A
+
 #endif
+
+#if !defined(EXTERNALPROTO) || defined(DEBUG)
+PHIDGET21_API int CCONV CPhidgetGPP_reboot_firmwareUpgrade(CPhidgetHandle phid);
+PHIDGET21_API int CCONV CPhidgetGPP_reboot_ISP(CPhidgetHandle phid);
+PHIDGET21_API int CCONV CPhidgetGPP_setLabel(CPhidgetHandle phid, const char *buffer);
+PHIDGET21_API int CCONV CPhidgetGPP_setDeviceSpecificConfigTable(CPhidgetHandle phid, unsigned char *data, int length, int index);
+PHIDGET21_API int CCONV CPhidgetGPP_setDeviceWideConfigTable(CPhidgetHandle phid, unsigned char *data, int length, int index);
+PHIDGET21_API int CCONV CPhidgetGPP_upgradeFirmware(CPhidgetHandle phid, unsigned char *data, int length);
+PHIDGET21_API int CCONV CPhidgetGPP_eraseFirmware(CPhidgetHandle phid);
+PHIDGET21_API int CCONV CPhidgetGPP_eraseConfig(CPhidgetHandle phid);
+PHIDGET21_API int CCONV CPhidgetGPP_writeFlash(CPhidgetHandle phid);
+#endif
+
 #include "cphidgetmacros.h"
 
 /**

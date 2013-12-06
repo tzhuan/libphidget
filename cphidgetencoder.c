@@ -279,6 +279,8 @@ CPHIDGETDATA(Encoder)
 	{
 		if(positionChange[i] != 0)
 			FIRE(PositionChange, i, timeChangeInt[i], positionChange[i]);
+		if(indexTrue[i])
+			FIRE(Index, i, phid->indexPosition[i]);
 	}
 
 	return EPHIDGET_OK;
@@ -348,6 +350,7 @@ CCREATE(Encoder, PHIDCLASS_ENCODER)
 //event setup functions
 CFHANDLE(Encoder, InputChange, int, int)
 CFHANDLE(Encoder, PositionChange, int, int, int)
+CFHANDLE(Encoder, Index, int, int)
 
 CGET(Encoder,InputCount,int)
 	TESTPTRS(phid,pVal) 

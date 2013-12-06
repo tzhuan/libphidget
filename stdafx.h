@@ -48,6 +48,9 @@
 
 #ifdef _WINDOWS
 // Defines & Include for Windows only
+	#ifndef AI_ADDRCONFIG
+		#define AI_ADDRCONFIG   0x00000400  // Resolution only if global address configured
+	#endif
 
 	//On Windows (but not WinCE), compile in Labview functions
 	#ifndef WINCE
@@ -121,6 +124,7 @@
 	#define snprintf _snprintf
 
 	#define strtoll (__int64)_strtoi64
+	#define strtoull (__int64)_strtoui64
 
 	#define CCONV __stdcall
 	#define CCONV_CDECL __cdecl
@@ -203,8 +207,6 @@
 	#define SOCKET_ERROR -1
 	#endif
 	typedef void *OVERLAPPED;
-	//typedef long long __int64;
-	typedef unsigned long long __uint64;
 	
 	typedef struct timeval TIME;
 
@@ -232,11 +234,6 @@
 
 	#elif _LINUX
 		// Defines & Include for Linux Only
-
-        // No libusb on Android
-        #ifndef _ANDROID
-            #include <usb.h>
-        #endif
 		#include <assert.h>
 		#include <dlfcn.h>
 
@@ -266,6 +263,8 @@ int hexval(unsigned char c);
 #ifdef DMALLOC
 #include "dmalloc.h"
 #endif
+
+extern void(CCONV *fptrJavaDetachCurrentThread)(void);
 
 #endif
 

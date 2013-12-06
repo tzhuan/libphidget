@@ -76,7 +76,7 @@ CPHIDGETINIT(GPS)
 	CUSBSendPacket((CPhidgetHandle)phid, buffer);*/
 
 	//read some initial data - rate is 10Hz so we shouldn't have to wait long
-	//This ensures we have recieved at least one GGA and one RMC
+	//This ensures we have received at least one GGA and one RMC
 	readtries = 30; //250ms
 	while((phid->fix==PUNK_BOOL || phid->haveTime==PUNK_BOOL || phid->haveDate==PUNK_BOOL) && readtries)
 	{

@@ -4,7 +4,7 @@
 
 /** \defgroup phidled Phidget LED 
  * \ingroup phidgets
- * Calls specific to the Phidget LED. See the product manual for more specific API details, supported functionality, units, etc.
+ * These calls are specific to the Phidget LED object. See your device's User Guide for more specific API details, technical information, and revision details. The User Guide, along with other resources, can be found on the product page for your device.
  * @{
  */
 
@@ -36,20 +36,7 @@ typedef enum {
  * @param count The led count.
  */
 CHDRGET(LED,LEDCount,int *count)
-/**
- * Gets the brightness of an LED.
- * @param phid An attached phidget LED handle.
- * @param index The LED index.
- * @param brightness The LED brightness (0-100).
- */
-CHDRGETINDEX(LED,DiscreteLED,int *brightness)
-/**
- * Sets the brightness of an LED.
- * @param phid An attached phidget LED handle.
- * @param index The LED index.
- * @param brightness The LED brightness (0-100).
- */
-CHDRSETINDEX(LED,DiscreteLED,int brightness)
+
 /**
  * Gets the current limit. This is for all ouputs.
  * @param phid An attached phidget LED handle.
@@ -74,9 +61,39 @@ CHDRGET(LED,Voltage,CPhidgetLED_Voltage *voltage)
  * @param voltage The Output Voltage.
  */
 CHDRSET(LED,Voltage,CPhidgetLED_Voltage voltage)
+/**
+ * Gets the brightness of an LED.
+ * @param phid An attached phidget LED handle.
+ * @param index The LED index.
+ * @param brightness The LED brightness (0-100).
+ */
+CHDRGETINDEX(LED,Brightness,double *brightness)
+/**
+ * Sets the brightness of an LED.
+ * @param phid An attached phidget LED handle.
+ * @param index The LED index.
+ * @param brightness The LED brightness (0-100).
+ */
+CHDRSETINDEX(LED,Brightness,double brightness)
+/**
+ * Gets the current limit of an LED.
+ * @param phid An attached phidget LED handle.
+ * @param index The LED index.
+ * @param limit The LED current limit (0-80 mA).
+ */
+CHDRGETINDEX(LED,CurrentLimitIndexed,double *limit)
+/**
+ * Sets the current limit of an LED.
+ * @param phid An attached phidget LED handle.
+ * @param index The LED index.
+ * @param limit The LED current limit (0-80 mA).
+ */
+CHDRSETINDEX(LED,CurrentLimitIndexed,double limit)
 
 #ifndef REMOVE_DEPRECATED
 DEP_CHDRGET("Deprecated - use CPhidgetLED_getLEDCount",LED,NumLEDs,int *)
+DEP_CHDRGETINDEX("Deprecated - use CPhidgetLED_getBrightness",LED,DiscreteLED,int *brightness)
+DEP_CHDRSETINDEX("Deprecated - use CPhidgetLED_getBrightness",LED,DiscreteLED,int brightness)
 #endif
 	
 #ifndef EXTERNALPROTO
@@ -89,9 +106,17 @@ DEP_CHDRGET("Deprecated - use CPhidgetLED_getLEDCount",LED,NumLEDs,int *)
 #define LED64_OUTLOW_PACKET 0x80
 #define LED64_OUTHIGH_PACKET 0xc0
 
+#define LED64_M3_OUT_LOW_PACKET 0x00
+#define LED64_M3_OUT_HIGH_PACKET 0x20
+#define LED64_M3_CONTROL_PACKET 0x40
+
 //IN Packet Types
 #define LED64_IN_LOW_PACKET 0x00
 #define LED64_IN_HIGH_PACKET 0x80
+
+#define LED64_M3_IN_LOW_PACKET 0x00
+#define LED64_M3_IN_HIGH_PACKET 0x20
+#define LED64_M3_IN_MISC_PACKET 0x40
 
 //Flags
 #define LED64_PGOOD_FLAG 0x01
@@ -102,20 +127,25 @@ DEP_CHDRGET("Deprecated - use CPhidgetLED_getLEDCount",LED,NumLEDs,int *)
 #define LED64_FAULT_FLAG 0x20
 #define LED64_OE_FLAG 0x40
 
+//M3 LED64
+#define LED64_M3_CURRENTLIMIT	80 //80 mA max
+
 struct _CPhidgetLED 
 {
 	CPhidget phid;
 
-	int LED_Power[LED_MAXLEDS];
+	double LED_Power[LED_MAXLEDS];
+	double LED_CurrentLimit[LED_MAXLEDS];
 	CPhidgetLED_Voltage voltage;
 	CPhidgetLED_CurrentLimit currentLimit;
 
-	int nextLED_Power[LED_MAXLEDS];
-	int lastLED_Power[LED_MAXLEDS];
+	double nextLED_Power[LED_MAXLEDS];
+	double lastLED_Power[LED_MAXLEDS];
 	unsigned char changedLED_Power[LED_MAXLEDS];
 	unsigned char changeRequests;
 
-	int LED_PowerEcho[LED_MAXLEDS];
+	double LED_PowerEcho[LED_MAXLEDS];
+	double LED_CurrentLimitEcho[LED_MAXLEDS];
 	unsigned char outputEnabledEcho[LED_MAXLEDS];
 	unsigned char ledOpenDetectEcho[LED_MAXLEDS];
 	unsigned char powerGoodEcho;
@@ -124,7 +154,7 @@ struct _CPhidgetLED
 	CPhidgetLED_Voltage voltageEcho;
 	CPhidgetLED_CurrentLimit currentLimitEcho;
 	
-	unsigned char TSDCount, TSDClearCount, PGoodErrState;
+	unsigned char TSDCount[4], TSDClearCount[4], TWarnCount[4], TWarnClearCount[4], PGoodErrState;
 	
 	unsigned char controlPacketWaiting;
 	unsigned char lastOutputPacket;

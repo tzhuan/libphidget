@@ -473,6 +473,8 @@ PWC_SETKEYS(Encoder)
 		{
 			GET_INT_VAL;
 			phid->indexPosition[index] = value;
+			
+			FIRE(Index, index, value);
 		}
 		else
 			ret = EPHIDGET_OUTOFBOUNDS;
@@ -867,8 +869,8 @@ PWC_SETKEYS(LED)
 	{
 		if(CHKINDEX(led.numLEDs, LED_MAXLEDS))
 		{
-			GET_INT_VAL;
-			INC_KEYCOUNT(LED_Power[index], PUNI_INT)
+			GET_DOUBLE_VAL;
+			INC_KEYCOUNT(LED_Power[index], PUNI_DBL)
 			phid->LED_Power[index] = value;
 		}
 		else
@@ -885,6 +887,17 @@ PWC_SETKEYS(LED)
 		GET_INT_VAL;
 		INC_KEYCOUNT(currentLimitEcho, -1)
 		phid->currentLimitEcho = value;
+	}
+	else if(KEYNAME("CurrentLimitIndexed"))
+	{
+		if(CHKINDEX(led.numLEDs, LED_MAXLEDS))
+		{
+			GET_DOUBLE_VAL;
+			INC_KEYCOUNT(LED_CurrentLimit[index], PUNI_DBL)
+			phid->LED_CurrentLimit[index] = value;
+		}
+		else
+			ret = EPHIDGET_OUTOFBOUNDS;
 	}
 	else{
 		PWC_BAD_SETTYPE(LED);
@@ -1035,6 +1048,7 @@ PWC_SETKEYS(MotorControl)
 		if(CHKINDEX(motorcontrol.numMotors, MOTORCONTROL_MAXMOTORS))
 		{
 			GET_DOUBLE_VAL;
+			INC_KEYCOUNT(motorSensedCurrent[index], PUNI_DBL)
 			phid->motorSensedCurrent[index] = value;
 			if(value != PUNK_DBL)
 				FIRE(CurrentUpdate, index, value);
@@ -1180,46 +1194,68 @@ PWC_SETKEYS(RFID)
 	}
 	else if(KEYNAME("LastTag"))
 	{
-		unsigned char tagData[5];
+		char *endPtr;
+		CPhidgetRFID_Tag tag = {0};
+		tag.protocol = (CPhidgetRFID_Protocol)strtol(state, &endPtr, 10);
+		strncpy(tag.tagString, endPtr+1, 25);
+
+		INC_KEYCOUNT(lastTagValid, PUNI_BOOL)
+		if(tag.protocol != 0)
+			phid->lastTagValid = PTRUE;
+		else
+			phid->lastTagValid = PFALSE;
+		
+		if(tag.protocol == PHIDGET_RFID_PROTOCOL_EM4100)
+		{
+			tag.tagData[0] = (hexval(tag.tagString[0])<<4)|hexval(tag.tagString[1]);
+			tag.tagData[1] = (hexval(tag.tagString[2])<<4)|hexval(tag.tagString[3]);
+			tag.tagData[2] = (hexval(tag.tagString[4])<<4)|hexval(tag.tagString[5]);
+			tag.tagData[3] = (hexval(tag.tagString[6])<<4)|hexval(tag.tagString[7]);
+			tag.tagData[4] = (hexval(tag.tagString[8])<<4)|hexval(tag.tagString[9]);
+		}
+		
+		phid->lastTag = tag;
+	}
+	else if(KEYNAME("Tag2"))
+	{
+		char *endPtr;
+		CPhidgetRFID_Tag tag = {0};
+		tag.protocol = (CPhidgetRFID_Protocol)strtol(state, &endPtr, 10);
+		strncpy(tag.tagString, endPtr+1, 25);
+
+		INC_KEYCOUNT(tagPresent, PUNI_BOOL)
+		phid->tagPresent = PTRUE;
+		
 		INC_KEYCOUNT(lastTagValid, PUNI_BOOL)
 		phid->lastTagValid = PTRUE;
-		
-		tagData[0] = (hexval(state[0])<<4)|hexval(state[1]);
-		tagData[1] = (hexval(state[2])<<4)|hexval(state[3]);
-		tagData[2] = (hexval(state[4])<<4)|hexval(state[5]);
-		tagData[3] = (hexval(state[6])<<4)|hexval(state[7]);
-		tagData[4] = (hexval(state[8])<<4)|hexval(state[9]);
-		
-		memcpy(phid->lastTag, tagData, 5);
-	}
-	else if(KEYNAME("Tag"))
-	{
-		unsigned char tagData[5];
-		//always increment on tagPresent==PUNI_BOOL before setting it!
-		INC_KEYCOUNT(tagPresent, PUNI_BOOL)
-		phid->tagPresent = 1;
-		
-		tagData[0] = (hexval(state[0])<<4)|hexval(state[1]);
-		tagData[1] = (hexval(state[2])<<4)|hexval(state[3]);
-		tagData[2] = (hexval(state[4])<<4)|hexval(state[5]);
-		tagData[3] = (hexval(state[6])<<4)|hexval(state[7]);
-		tagData[4] = (hexval(state[8])<<4)|hexval(state[9]);
 
-		FIRE(Tag, tagData);
+		if(tag.protocol == PHIDGET_RFID_PROTOCOL_EM4100)
+		{
+			tag.tagData[0] = (hexval(tag.tagString[0])<<4)|hexval(tag.tagString[1]);
+			tag.tagData[1] = (hexval(tag.tagString[2])<<4)|hexval(tag.tagString[3]);
+			tag.tagData[2] = (hexval(tag.tagString[4])<<4)|hexval(tag.tagString[5]);
+			tag.tagData[3] = (hexval(tag.tagString[6])<<4)|hexval(tag.tagString[7]);
+			tag.tagData[4] = (hexval(tag.tagString[8])<<4)|hexval(tag.tagString[9]);
+			FIRE(Tag, tag.tagData);
+		}
+
+		FIRE(Tag2, tag.tagString, tag.protocol);
 		
-		memcpy(phid->lastTag, tagData, 5);
+		phid->lastTag = tag;
 	}
-	else if(KEYNAME("TagLoss"))
+	else if(KEYNAME("TagLoss2"))
 	{
-		//always increment on tagPresent==PUNI_BOOL before setting it!
 		INC_KEYCOUNT(tagPresent, PUNI_BOOL)
-		phid->tagPresent = 0;
-		FIRE(TagLost, phid->lastTag);
+		phid->tagPresent = PFALSE;
+
+		if(phid->lastTag.protocol == PHIDGET_RFID_PROTOCOL_EM4100)
+			FIRE(TagLost, phid->lastTag.tagData);
+		FIRE(TagLost2, phid->lastTag.tagString, phid->lastTag.protocol);
 	}
 	else if(KEYNAME("TagState"))
 	{			
 		GET_INT_VAL;
-		//always increment on tagPresent==PUNI_BOOL before setting it!
+
 		INC_KEYCOUNT(tagPresent, PUNI_BOOL)
 		phid->tagPresent = value;
 	}
@@ -2003,6 +2039,7 @@ void network_phidget_event_handler(const char *key, const char *val, unsigned in
 					CPhidget_clearStatusFlag(&phid->status, PHIDGET_DETACHING_FLAG, NULL);
 						
 					phid->deviceIDSpec = 0;
+					phid->deviceUID = 0;
 					ZEROMEM(&phid->attr, sizeof(CPhidgetAttr));
 					if(phid->specificDevice != PHIDGETOPEN_LABEL)
 						ZEROMEM(phid->label, MAX_LABEL_STORAGE);
@@ -2028,9 +2065,13 @@ void network_phidget_event_handler(const char *key, const char *val, unsigned in
 			if((phid->initKeys != PUNK_INT) 
 				&& (phid->keyCount >= phid->initKeys) 
 				&& !CPhidget_statusFlagIsSet(phid->status, PHIDGET_ATTACHED_FLAG)
-				&& CPhidget_statusFlagIsSet(phid->status, PHIDGET_OPENED_FLAG))
+				&& CPhidget_statusFlagIsSet(phid->status, PHIDGET_OPENED_FLAG)
+				&& CPhidget_statusFlagIsSet(phid->status, PHIDGET_SERVER_CONNECTED_FLAG))
 			{
 				LOG(PHIDGET_LOG_VERBOSE, "Got all initkeys, run attach - %d/%d", phid->keyCount, phid->initKeys);
+
+				//Set UID
+				phid->deviceUID = CPhidget_getUID(phid->deviceIDSpec, phid->deviceVersion);
 
 				CPhidget_setStatusFlag(&phid->status, PHIDGET_ATTACHED_FLAG, &phid->lock);
 
@@ -2114,6 +2155,7 @@ void network_manager_event_handler(const char *key, const char *val, unsigned in
 		phid->serialNumber = serialNumber;
 		phid->deviceIDSpec = (unsigned short)strtol(deviceIDSpec, NULL, 10);
 		phid->deviceVersion = strtol(version, NULL, 10);
+		phid->deviceUID = CPhidget_getUID(phid->deviceIDSpec, phid->deviceVersion);
 		phid->specificDevice = PHIDGETOPEN_SERIAL; //so it actually compares the serial
 
 		for(i = 1;i<PHIDGET_DEVICE_COUNT;i++)

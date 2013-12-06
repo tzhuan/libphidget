@@ -149,13 +149,6 @@ attach_handler(CPhidgetHandle h, void *arg)
 	jobject attachEvent;
 	jlong devhandle;
 
-	//could pass this to AttachCurrentThread for named threads.
-	//Test first!
-	JavaVMAttachArgs args;
-	args.version = JNI_VERSION_1_2;
-	args.name = "Central Thread";
-	args.group = NULL;
-
 	if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
 		JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
 
@@ -174,7 +167,6 @@ attach_handler(CPhidgetHandle h, void *arg)
 	(*env)->CallVoidMethod(env, obj, fireAttach_mid, attachEvent);
 	(*env)->DeleteLocalRef(env, device);
 	(*env)->DeleteLocalRef(env, attachEvent);
-	(*ph_vm)->DetachCurrentThread(ph_vm);
 
 	return 0;
 }
@@ -218,7 +210,6 @@ detach_handler(CPhidgetHandle h, void *arg)
 	(*env)->CallVoidMethod(env, obj, fireDetach_mid, detachEvent);
 	(*env)->DeleteLocalRef(env, device);
 	(*env)->DeleteLocalRef(env, detachEvent);
-	(*ph_vm)->DetachCurrentThread(ph_vm);
 
 	return 0;
 }
@@ -241,15 +232,9 @@ serverConnect_handler(CPhidgetManagerHandle h, void *arg)
 	JNIEnv *env;
 	jobject obj;
 	jobject serverConnectEvent;
-	jint result;
 
-	result = (*ph_vm)->GetEnv(ph_vm, (void **)&env, JNI_VERSION_1_4);
-	
-	if(result == JNI_EDETACHED)
-	{
-		if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
-			JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
-	}
+	if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
+		JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
 
 	obj = (jobject)arg;
 
@@ -258,7 +243,6 @@ serverConnect_handler(CPhidgetManagerHandle h, void *arg)
 		return -1;
 	(*env)->CallVoidMethod(env, obj, fireServerConnect_mid, serverConnectEvent);
 	(*env)->DeleteLocalRef(env, serverConnectEvent);
-	(*ph_vm)->DetachCurrentThread(ph_vm);
 
 	return 0;
 }
@@ -281,15 +265,9 @@ serverDisconnect_handler(CPhidgetManagerHandle h, void *arg)
 	JNIEnv *env;
 	jobject obj;
 	jobject serverDisconnectEvent;
-	jint result;
 
-	result = (*ph_vm)->GetEnv(ph_vm, (void **)&env, JNI_VERSION_1_4);
-	
-	if(result == JNI_EDETACHED)
-	{
-		if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
-			JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
-	}
+	if ((*ph_vm)->AttachCurrentThread(ph_vm, (JNIEnvPtr)&env, NULL))
+		JNI_ABORT_STDERR("Couldn't AttachCurrentThread");
 
 	obj = (jobject)arg;
 
@@ -298,7 +276,6 @@ serverDisconnect_handler(CPhidgetManagerHandle h, void *arg)
 		return -1;
 	(*env)->CallVoidMethod(env, obj, fireServerDisconnect_mid, serverDisconnectEvent);
 	(*env)->DeleteLocalRef(env, serverDisconnectEvent);
-	(*ph_vm)->DetachCurrentThread(ph_vm);
 
 	return 0;
 }

@@ -5,7 +5,7 @@
 
 /** \defgroup phidservo Phidget Servo 
  * \ingroup phidgets
- * Calls specific to the Phidget Servo. See the product manual for more specific API details, supported functionality, units, etc.
+ * These calls are specific to the Phidget Servo object. See your device's User Guide for more specific API details, technical information, and revision details. The User Guide, along with other resources, can be found on the product page for your device.
  * @{
  */
 
@@ -132,7 +132,7 @@ struct _CPhidgetServo {
 	CPhidgetServoParameters servoParams[ADVSERVO_MAXSERVOS];
 	char *servoParamString[ADVSERVO_MAXSERVOS];
 
-	unsigned char outputPacket[8];
+	unsigned char outputPacket[MAX_OUT_PACKET_SIZE];
 	unsigned int outputPacketLen;
 } typedef CPhidgetServoInfo;
 #endif

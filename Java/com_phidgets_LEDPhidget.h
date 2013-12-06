@@ -25,10 +25,10 @@ extern "C" {
 #define com_phidgets_LEDPhidget_PHIDID_ACCELEROMETER_3AXIS 126L
 #undef com_phidgets_LEDPhidget_PHIDID_ADVANCEDSERVO_1MOTOR
 #define com_phidgets_LEDPhidget_PHIDID_ADVANCEDSERVO_1MOTOR 130L
-#undef com_phidgets_LEDPhidget_PHIDID_ANALOG_4OUTPUT
-#define com_phidgets_LEDPhidget_PHIDID_ANALOG_4OUTPUT 55L
 #undef com_phidgets_LEDPhidget_PHIDID_ADVANCEDSERVO_8MOTOR
 #define com_phidgets_LEDPhidget_PHIDID_ADVANCEDSERVO_8MOTOR 58L
+#undef com_phidgets_LEDPhidget_PHIDID_ANALOG_4OUTPUT
+#define com_phidgets_LEDPhidget_PHIDID_ANALOG_4OUTPUT 55L
 #undef com_phidgets_LEDPhidget_PHIDID_BIPOLAR_STEPPER_1MOTOR
 #define com_phidgets_LEDPhidget_PHIDID_BIPOLAR_STEPPER_1MOTOR 123L
 #undef com_phidgets_LEDPhidget_PHIDID_BRIDGE_4INPUT
@@ -49,32 +49,28 @@ extern "C" {
 #define com_phidgets_LEDPhidget_PHIDID_INTERFACEKIT_0_0_8 129L
 #undef com_phidgets_LEDPhidget_PHIDID_INTERFACEKIT_0_16_16
 #define com_phidgets_LEDPhidget_PHIDID_INTERFACEKIT_0_16_16 68L
+#undef com_phidgets_LEDPhidget_PHIDID_INTERFACEKIT_2_2_2
+#define com_phidgets_LEDPhidget_PHIDID_INTERFACEKIT_2_2_2 54L
 #undef com_phidgets_LEDPhidget_PHIDID_INTERFACEKIT_8_8_8
 #define com_phidgets_LEDPhidget_PHIDID_INTERFACEKIT_8_8_8 69L
 #undef com_phidgets_LEDPhidget_PHIDID_INTERFACEKIT_8_8_8_w_LCD
 #define com_phidgets_LEDPhidget_PHIDID_INTERFACEKIT_8_8_8_w_LCD 125L
 #undef com_phidgets_LEDPhidget_PHIDID_IR
 #define com_phidgets_LEDPhidget_PHIDID_IR 77L
-#undef com_phidgets_LEDPhidget_PHIDID_LED_64
-#define com_phidgets_LEDPhidget_PHIDID_LED_64 74L
 #undef com_phidgets_LEDPhidget_PHIDID_LED_64_ADV
 #define com_phidgets_LEDPhidget_PHIDID_LED_64_ADV 76L
 #undef com_phidgets_LEDPhidget_PHIDID_LINEAR_TOUCH
 #define com_phidgets_LEDPhidget_PHIDID_LINEAR_TOUCH 118L
-#undef com_phidgets_LEDPhidget_PHIDID_MOTORCONTROL_HC_2MOTOR
-#define com_phidgets_LEDPhidget_PHIDID_MOTORCONTROL_HC_2MOTOR 89L
-#undef com_phidgets_LEDPhidget_PHIDID_MOTORCONTROL_LV_2MOTOR_4INPUT
-#define com_phidgets_LEDPhidget_PHIDID_MOTORCONTROL_LV_2MOTOR_4INPUT 88L
 #undef com_phidgets_LEDPhidget_PHIDID_MOTORCONTROL_1MOTOR
 #define com_phidgets_LEDPhidget_PHIDID_MOTORCONTROL_1MOTOR 62L
-#undef com_phidgets_LEDPhidget_PHIDID_PHSENSOR
-#define com_phidgets_LEDPhidget_PHIDID_PHSENSOR 116L
+#undef com_phidgets_LEDPhidget_PHIDID_MOTORCONTROL_HC_2MOTOR
+#define com_phidgets_LEDPhidget_PHIDID_MOTORCONTROL_HC_2MOTOR 89L
 #undef com_phidgets_LEDPhidget_PHIDID_RFID_2OUTPUT
 #define com_phidgets_LEDPhidget_PHIDID_RFID_2OUTPUT 49L
+#undef com_phidgets_LEDPhidget_PHIDID_RFID_2OUTPUT_READ_WRITE
+#define com_phidgets_LEDPhidget_PHIDID_RFID_2OUTPUT_READ_WRITE 52L
 #undef com_phidgets_LEDPhidget_PHIDID_ROTARY_TOUCH
 #define com_phidgets_LEDPhidget_PHIDID_ROTARY_TOUCH 119L
-#undef com_phidgets_LEDPhidget_PHIDID_SERVO_1MOTOR
-#define com_phidgets_LEDPhidget_PHIDID_SERVO_1MOTOR 57L
 #undef com_phidgets_LEDPhidget_PHIDID_SPATIAL_ACCEL_3AXIS
 #define com_phidgets_LEDPhidget_PHIDID_SPATIAL_ACCEL_3AXIS 127L
 #undef com_phidgets_LEDPhidget_PHIDID_SPATIAL_ACCEL_GYRO_COMPASS
@@ -83,6 +79,8 @@ extern "C" {
 #define com_phidgets_LEDPhidget_PHIDID_TEMPERATURESENSOR 112L
 #undef com_phidgets_LEDPhidget_PHIDID_TEMPERATURESENSOR_4
 #define com_phidgets_LEDPhidget_PHIDID_TEMPERATURESENSOR_4 50L
+#undef com_phidgets_LEDPhidget_PHIDID_TEMPERATURESENSOR_IR
+#define com_phidgets_LEDPhidget_PHIDID_TEMPERATURESENSOR_IR 60L
 #undef com_phidgets_LEDPhidget_PHIDID_TEXTLCD_2x20_w_8_8_8
 #define com_phidgets_LEDPhidget_PHIDID_TEXTLCD_2x20_w_8_8_8 381L
 #undef com_phidgets_LEDPhidget_PHIDID_TEXTLCD_ADAPTER
@@ -95,8 +93,16 @@ extern "C" {
 #define com_phidgets_LEDPhidget_PHIDID_INTERFACEKIT_0_8_8_w_LCD 83L
 #undef com_phidgets_LEDPhidget_PHIDID_INTERFACEKIT_4_8_8
 #define com_phidgets_LEDPhidget_PHIDID_INTERFACEKIT_4_8_8 4L
+#undef com_phidgets_LEDPhidget_PHIDID_LED_64
+#define com_phidgets_LEDPhidget_PHIDID_LED_64 74L
+#undef com_phidgets_LEDPhidget_PHIDID_MOTORCONTROL_LV_2MOTOR_4INPUT
+#define com_phidgets_LEDPhidget_PHIDID_MOTORCONTROL_LV_2MOTOR_4INPUT 88L
+#undef com_phidgets_LEDPhidget_PHIDID_PHSENSOR
+#define com_phidgets_LEDPhidget_PHIDID_PHSENSOR 116L
 #undef com_phidgets_LEDPhidget_PHIDID_RFID
 #define com_phidgets_LEDPhidget_PHIDID_RFID 48L
+#undef com_phidgets_LEDPhidget_PHIDID_SERVO_1MOTOR
+#define com_phidgets_LEDPhidget_PHIDID_SERVO_1MOTOR 57L
 #undef com_phidgets_LEDPhidget_PHIDID_SERVO_1MOTOR_OLD
 #define com_phidgets_LEDPhidget_PHIDID_SERVO_1MOTOR_OLD 2L
 #undef com_phidgets_LEDPhidget_PHIDID_SERVO_4MOTOR
@@ -180,7 +186,7 @@ JNIEXPORT jlong JNICALL Java_com_phidgets_LEDPhidget_create
  * Method:    getCurrentLimit
  * Signature: ()I
  */
-JNIEXPORT jint JNICALL Java_com_phidgets_LEDPhidget_getCurrentLimit
+JNIEXPORT jint JNICALL Java_com_phidgets_LEDPhidget_getCurrentLimit__
   (JNIEnv *, jobject);
 
 /*
@@ -188,7 +194,7 @@ JNIEXPORT jint JNICALL Java_com_phidgets_LEDPhidget_getCurrentLimit
  * Method:    setCurrentLimit
  * Signature: (I)V
  */
-JNIEXPORT void JNICALL Java_com_phidgets_LEDPhidget_setCurrentLimit
+JNIEXPORT void JNICALL Java_com_phidgets_LEDPhidget_setCurrentLimit__I
   (JNIEnv *, jobject, jint);
 
 /*
@@ -230,6 +236,38 @@ JNIEXPORT jint JNICALL Java_com_phidgets_LEDPhidget_getDiscreteLED
  */
 JNIEXPORT void JNICALL Java_com_phidgets_LEDPhidget_setDiscreteLED
   (JNIEnv *, jobject, jint, jint);
+
+/*
+ * Class:     com_phidgets_LEDPhidget
+ * Method:    getBrightness
+ * Signature: (I)D
+ */
+JNIEXPORT jdouble JNICALL Java_com_phidgets_LEDPhidget_getBrightness
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     com_phidgets_LEDPhidget
+ * Method:    setBrightness
+ * Signature: (ID)V
+ */
+JNIEXPORT void JNICALL Java_com_phidgets_LEDPhidget_setBrightness
+  (JNIEnv *, jobject, jint, jdouble);
+
+/*
+ * Class:     com_phidgets_LEDPhidget
+ * Method:    getCurrentLimit
+ * Signature: (I)D
+ */
+JNIEXPORT jdouble JNICALL Java_com_phidgets_LEDPhidget_getCurrentLimit__I
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     com_phidgets_LEDPhidget
+ * Method:    setCurrentLimit
+ * Signature: (ID)V
+ */
+JNIEXPORT void JNICALL Java_com_phidgets_LEDPhidget_setCurrentLimit__ID
+  (JNIEnv *, jobject, jint, jdouble);
 
 #ifdef __cplusplus
 }

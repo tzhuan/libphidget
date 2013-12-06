@@ -3,7 +3,7 @@
 #include "cphidget.h"
 
 /** \defgroup phidmanager Phidget Manager 
- * Calls specific to the Phidget Manager. The Phidget Manager allows enumeration of all connected devices and notification of device
+ * These calls are specific to the Phidget Manager. The Phidget Manager allows enumeration of all connected devices and notification of device
  * attach and detach events.
  * @{
  */

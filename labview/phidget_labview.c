@@ -140,10 +140,12 @@ LV_CFHANDLE_BODY(RFID, TagLost, lvUInt8Array, void *userPtr, unsigned char *val1
     DSDisposePtr(data);
 	return EPHIDGET_OK;
 }
-LV_CFHANDLE_BODY(RFID, RawData, lvInt32Array, void *userPtr, int *val1, int val2)
-    data->val1=(lvArrInt32DH)DSNewHandle(sizeof(int32)+val2*sizeof(int32));
-    (*(data->val1))->length = val2;
-	memcpy((*(data->val1))->data, val1, val2 * sizeof(int32));
+LV_CFHANDLE_BODY(RFID, Tag2, lvRFIDTag2, void *userPtr, char *val1, CPhidgetRFID_Protocol val2)
+    data->val1=(LStrHandle)DSNewHandle(sizeof(int32)+255*sizeof(char));
+	memset(LStrBuf(*data->val1),'\0',255);
+	snprintf((char*)LStrBuf(*data->val1),255,"%s",val1);
+	LStrLen(*data->val1)=strlen(val1);
+	data->val2 = val2;
 
     ret = PostLVUserEvent(ev, data);
 
@@ -151,25 +153,12 @@ LV_CFHANDLE_BODY(RFID, RawData, lvInt32Array, void *userPtr, int *val1, int val2
     DSDisposePtr(data);
 	return EPHIDGET_OK;
 }
-LV_CFHANDLE_BODY(RFID, TagAdvanced, lvRFIDTagAdvanced, void *userPtr, char *val1, CPhidgetRFID_TagInfoHandle val2)
+LV_CFHANDLE_BODY(RFID, TagLost2, lvRFIDTag2, void *userPtr, char *val1, CPhidgetRFID_Protocol val2)
     data->val1=(LStrHandle)DSNewHandle(sizeof(int32)+255*sizeof(char));
 	memset(LStrBuf(*data->val1),'\0',255);
 	snprintf((char*)LStrBuf(*data->val1),255,"%s",val1);
 	LStrLen(*data->val1)=strlen(val1);
-	data->val2 = *val2;
-
-    ret = PostLVUserEvent(ev, data);
-
-	DSDisposeHandle(data->val1);
-    DSDisposePtr(data);
-	return EPHIDGET_OK;
-}
-LV_CFHANDLE_BODY(RFID, TagLostAdvanced, lvRFIDTagAdvanced, void *userPtr, char *val1, CPhidgetRFID_TagInfoHandle val2)
-    data->val1=(LStrHandle)DSNewHandle(sizeof(int32)+255*sizeof(char));
-	memset(LStrBuf(*data->val1),'\0',255);
-	snprintf((char*)LStrBuf(*data->val1),255,"%s",val1);
-	LStrLen(*data->val1)=strlen(val1);
-	data->val2 = *val2;
+	data->val2 = val2;
 
     ret = PostLVUserEvent(ev, data);
 
@@ -397,9 +386,8 @@ LV_NULL_FUNC(PHSensor, PHChange)
 LV_NULL_FUNC(RFID, OutputChange)
 LV_NULL_FUNC(RFID, Tag)
 LV_NULL_FUNC(RFID, TagLost)
-LV_NULL_FUNC(RFID, RawData)
-LV_NULL_FUNC(RFID, TagAdvanced)
-LV_NULL_FUNC(RFID, TagLostAdvanced)
+LV_NULL_FUNC(RFID, Tag2)
+LV_NULL_FUNC(RFID, TagLost2)
 
 LV_NULL_FUNC(Servo, PositionChange)
 
